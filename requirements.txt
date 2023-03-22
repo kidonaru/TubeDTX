@@ -1,0 +1,10 @@
+accelerate==0.17.1
+gradio==3.23.0
+librosa==0.10.0
+numpy==1.23.5
+pretty_midi==0.2.10
+demucs==4.0.0
+moviepy==1.0.3
+pytube==12.1.2
+mock==5.0.1
+japanize_matplotlib==1.1.3

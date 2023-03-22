@@ -1,0 +1,10 @@
+
+.DS_Store
+__pycache__
+venv
+flagged
+config.json
+bgm.ogg
+resources/chips
+resources/tube_dtx_config.json
+
