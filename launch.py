@@ -147,11 +147,15 @@ with gr.Blocks() as demo:
                     with gr.Tabs():
                         with gr.TabItem("Base"):
                             midi_input_name_textbox = gr.Textbox(label="Input File Name", value=config.midi_input_name)
-                            midi_resolution_slider = gr.Slider(0, 16, value=config.midi_resolution, label="Resolution")
+                            midi_resolution_slider = gr.Slider(0, 16, step=1, value=config.midi_resolution, label="Resolution")
                             with gr.Row():
                                 midi_threshold_slider = gr.Slider(0, 1, value=config.midi_threshold, label="Threshold")
                                 midi_segmentation_slider = gr.Slider(0, 1, value=config.midi_segmentation, label="Segmentation")
-                            midi_adjust_velocity_slider = gr.Slider(0, 1, value=config.midi_adjust_velocity, label="Adjust Velocity")
+                            with gr.Row():
+                                midi_hop_length_slider = gr.Slider(1, 512, step=1, value=config.midi_hop_length, label="Hop Length")
+                                midi_onset_delta_slider = gr.Slider(0, 1, step=0.01, value=config.midi_onset_delta, label="Onset Delta")
+                            with gr.Row():
+                                midi_test_duration_slider = gr.Slider(0, 512, step=1, value=config.midi_test_duration, label="Test Duration")
                         with gr.TabItem("Pitch"):
                             with gr.Row():
                                 midi_bd_min_slider = gr.Slider(0, 127, step=1, value=config.bd_min, label="BD Min")
@@ -357,7 +361,9 @@ with gr.Blocks() as demo:
         midi_resolution_slider,
         midi_threshold_slider,
         midi_segmentation_slider,
-        midi_adjust_velocity_slider,
+        midi_hop_length_slider,
+        midi_onset_delta_slider,
+        midi_test_duration_slider,
 
         midi_bd_min_slider,
         midi_sn_min_slider,

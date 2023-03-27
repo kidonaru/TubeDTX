@@ -86,7 +86,9 @@ class ProjectConfig(JsonConfig):
     midi_resolution: int = 8
     midi_threshold: float = 0.2
     midi_segmentation: float = 0.9
-    midi_adjust_velocity: float = 0.3
+    midi_hop_length: int = 256
+    midi_onset_delta: float = 0.03
+    midi_test_duration: float = 30.0
 
     bd_min: int = 36 # C1
     sn_min: int = 53 # F2
