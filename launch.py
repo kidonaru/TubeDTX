@@ -155,6 +155,12 @@ with gr.Blocks() as demo:
                                 midi_hop_length_slider = gr.Slider(1, 512, step=1, value=config.midi_hop_length, label="Hop Length")
                                 midi_onset_delta_slider = gr.Slider(0, 1, step=0.01, value=config.midi_onset_delta, label="Onset Delta")
                             with gr.Row():
+                                midi_onset_range_min_slider = gr.Slider(-8, 0, step=1, value=config.midi_onset_range_min, label="Onset Range Min")
+                                midi_onset_range_max_slider = gr.Slider(0, 8, step=1, value=config.midi_onset_range_max, label="Onset Range Max")
+                            with gr.Row():
+                                midi_velocity_max_percentile_slider = gr.Slider(0, 100, step=1, value=config.midi_velocity_max_percentile, label="Velocity Max Percentile")
+                            with gr.Row():
+                                midi_test_offset_slider = gr.Slider(0, 512, step=1, value=config.midi_test_offset, label="Test Offset")
                                 midi_test_duration_slider = gr.Slider(0, 512, step=1, value=config.midi_test_duration, label="Test Duration")
                         with gr.TabItem("Pitch"):
                             with gr.Row():
@@ -363,6 +369,10 @@ with gr.Blocks() as demo:
         midi_segmentation_slider,
         midi_hop_length_slider,
         midi_onset_delta_slider,
+        midi_onset_range_min_slider,
+        midi_onset_range_max_slider,
+        midi_velocity_max_percentile_slider,
+        midi_test_offset_slider,
         midi_test_duration_slider,
 
         midi_bd_min_slider,

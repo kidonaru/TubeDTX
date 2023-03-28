@@ -28,7 +28,19 @@ def get_peak_frame_data(frame_data, samples_num, frame_clip):
     return peak_frame_data
 
 @debug_args
-def convert_to_midi_drums(output_path, input_path, bpm, resolution, threshold, segmentation, hop_length, onset_delta, config: ProjectConfig):
+def convert_to_midi_drums(
+        output_path,
+        input_path,
+        bpm,
+        resolution,
+        threshold,
+        segmentation,
+        hop_length,
+        onset_delta,
+        onset_range_min,
+        onset_range_max,
+        velocity_max_percentile,
+        config: ProjectConfig):
     # 音声ファイルの読み込みと解析
     y, sr = librosa.load(input_path)
     y_normalized = librosa.util.normalize(y)
@@ -46,8 +58,9 @@ def convert_to_midi_drums(output_path, input_path, bpm, resolution, threshold, s
     track = pretty_midi.Instrument(program=0, is_drum=True)
 
     # 曲の解析とノートイベントの追加
-    peak_times = {}
-    start_powers = {}
+    start_frames = {}
+    peak_frames = {}
+    peak_powers = {}
     prev_drums_frame_data = {}
 
     # Define MIDI note numbers
@@ -64,7 +77,7 @@ def convert_to_midi_drums(output_path, input_path, bpm, resolution, threshold, s
     lp_note = 44
     lbd_note = 35
 
-    max_velocities = {}
+    velocities_map: dict[int, list[float]] = {}
     used_onsets = set()
 
     for t, frame in enumerate(C.T):
@@ -93,15 +106,15 @@ def convert_to_midi_drums(output_path, input_path, bpm, resolution, threshold, s
 
         # フロアタム推定
         ft_power = get_peak_power(config.ft_min, config.ft_range)
-        drums_frame_data[ft_note] = ft_power and bd_power == 0
+        drums_frame_data[ft_note] = ft_power if bd_power == 0 else 0
 
         # ロータム推定
         lt_power = get_peak_power(config.lt_min, config.lt_range)
-        drums_frame_data[lt_note] = lt_power and bd_power == 0 and ft_power == 0
+        drums_frame_data[lt_note] = lt_power if bd_power == 0 and ft_power == 0 else 0
 
         # ハイタム推定
         ht_power = get_peak_power(config.ht_min, config.ht_range)
-        drums_frame_data[ht_note] = ht_power and bd_power == 0 and ft_power == 0 and lt_power == 0
+        drums_frame_data[ht_note] = ht_power if bd_power == 0 and ft_power == 0 and lt_power == 0 else 0
 
         # スネア推定
         sn_power = get_peak_power(config.sn_min, config.sn_range)
@@ -110,28 +123,37 @@ def convert_to_midi_drums(output_path, input_path, bpm, resolution, threshold, s
         # notesを生成
         for pitch, power in drums_frame_data.items():
             prev_power = prev_drums_frame_data[pitch] if pitch in prev_drums_frame_data else 0
+            peak_power = peak_powers[pitch] if pitch in peak_powers else 0
 
             if power > prev_power:
-                peak_times[pitch] = t * frame_time
-                start_powers[pitch] = power
-            if power < prev_power * segmentation and pitch in peak_times:
-                start = peak_times.pop(pitch)
-                velocity = int(start_powers.pop(pitch) * 127)
+                if pitch not in start_frames:
+                    start_frames[pitch] = t
+                if power > peak_power:
+                    peak_frames[pitch] = t
+                    peak_powers[pitch] = power
+            if power < prev_power * segmentation and pitch in peak_frames:
+                start_frame = start_frames.pop(pitch)
+                peak_frame = peak_frames.pop(pitch)
+                velocity = peak_powers.pop(pitch)
 
                 def get_onset(t):
-                    for i in range(-2, 3):
+                    for i in range(onset_range_min, onset_range_max):
                         if t + i in onsets:
                             return t + i
                     return None
 
-                onset = get_onset(t)
+                onset = get_onset(start_frame)
                 if onset is not None:
                     used_onsets.add(onset)
 
+                start = start_frame * frame_time
                 end = start + frame_time
-                max_velocities[pitch] = max(max_velocities.get(pitch, 0), velocity)
                 note = pretty_midi.Note(velocity=velocity, pitch=pitch, start=start, end=end)
                 track.notes.append(note)
+
+                if pitch not in velocities_map:
+                    velocities_map[pitch] = []
+                velocities_map[pitch].append(velocity)
 
         prev_drums_frame_data = drums_frame_data
 
@@ -143,15 +165,24 @@ def convert_to_midi_drums(output_path, input_path, bpm, resolution, threshold, s
             start = onset * frame_time
             end = start + frame_time
             power = onset_env[onset]
-            velocity = int(power * 127)
-            max_velocities[pitch] = max(max_velocities.get(pitch, 0), velocity)
+            velocity = power
             note = pretty_midi.Note(velocity=velocity, pitch=pitch, start=start, end=end)
             track.notes.append(note)
+
+            if pitch not in velocities_map:
+                velocities_map[pitch] = []
+            velocities_map[pitch].append(velocity)
+
+    # パーセンタイルで音量最大値を設定
+    max_velocities = {}
+    for pitch, velocities in velocities_map.items():
+        max_velocities[pitch] = np.percentile(velocities, velocity_max_percentile)
 
     # チャンネルごとにノーマライズ
     for note in track.notes:
         note: pretty_midi.Note = note
-        note.velocity = int(note.velocity / max_velocities.get(note.pitch, 0) * 127)
+        max_velocity = max_velocities.get(note.pitch, 0)
+        note.velocity = _clamp(int(note.velocity / max_velocity * 127), 0, 127)
 
     # トラックをMIDIデータに追加
     midi_data.instruments.append(track)
@@ -162,9 +193,17 @@ def convert_to_midi_drums(output_path, input_path, bpm, resolution, threshold, s
     print(f"MIDI convert is complete. {output_path}")
 
 @debug_args
-def convert_to_midi_peak(output_path, input_path, bpm, resolution, threshold, segmentation, hop_length, onset_delta, test_duration):
+def convert_to_midi_peak(
+        output_path,
+        input_path,
+        bpm,
+        resolution,
+        threshold,
+        hop_length,
+        test_offset,
+        test_duration):
     # 音声ファイルの読み込みと解析
-    y, sr = librosa.load(input_path, duration=test_duration)
+    y, sr = librosa.load(input_path, offset=test_offset, duration=test_duration)
     y_normalized = librosa.util.normalize(y)
     C = np.abs(librosa.cqt(y_normalized, sr=sr, hop_length=hop_length))
     frame_time = librosa.frames_to_time(1, sr=sr, hop_length=hop_length)
@@ -200,9 +239,17 @@ def convert_to_midi_peak(output_path, input_path, bpm, resolution, threshold, se
     print(f"MIDI convert is complete. {output_path}")
 
 @debug_args
-def convert_to_midi_cqt(output_path, input_path, bpm, resolution, threshold, segmentation, hop_length, onset_delta, test_duration):
+def convert_to_midi_cqt(
+        output_path,
+        input_path,
+        bpm,
+        resolution,
+        threshold,
+        hop_length,
+        test_offset,
+        test_duration):
     # 音声ファイルの読み込みと解析
-    y, sr = librosa.load(input_path, duration=test_duration)
+    y, sr = librosa.load(input_path, offset=test_offset, duration=test_duration)
     y_normalized = librosa.util.normalize(y)
     C = np.abs(librosa.cqt(y_normalized, sr=sr, hop_length=hop_length))
     frame_time = librosa.frames_to_time(1, sr=sr, hop_length=hop_length)
@@ -246,9 +293,15 @@ def apply_highpass_filter(data, cutoff, fs, order=5):
     return y
 
 @debug_args
-def output_onset_image(audio_file, output_image, hop_length, onset_delta, test_duration):
+def output_onset_image(
+        audio_file,
+        output_image,
+        hop_length,
+        onset_delta,
+        test_offset,
+        test_duration):
     # 音声ファイルの読み込み
-    y, sr = librosa.load(audio_file, duration=test_duration)
+    y, sr = librosa.load(audio_file, offset=test_offset, duration=test_duration)
     y_normalized = librosa.util.normalize(y)
 
     # ハイパスフィルタを適用

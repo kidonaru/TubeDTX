@@ -331,6 +331,10 @@ def _convert_to_midi_gr(is_test, *args):
     segmentation = config.midi_segmentation
     hop_length = config.midi_hop_length
     onset_delta = config.midi_onset_delta
+    onset_range_min = config.midi_onset_range_min
+    onset_range_max = config.midi_onset_range_max
+    velocity_max_percentile = config.midi_velocity_max_percentile
+    test_offset = config.midi_test_offset
     test_duration = config.midi_test_duration
     bpm = config.dtx_bpm
 
@@ -338,20 +342,54 @@ def _convert_to_midi_gr(is_test, *args):
 
     if not is_test:
         output_path = os.path.splitext(input_path)[0] + ".mid"
-        convert_to_midi_drums(output_path, input_path, bpm, resolution, threshold, segmentation, hop_length, onset_delta, config)
+        convert_to_midi_drums(
+            output_path,
+            input_path,
+            bpm,
+            resolution,
+            threshold,
+            segmentation,
+            hop_length,
+            onset_delta,
+            onset_range_min,
+            onset_range_max,
+            velocity_max_percentile,
+            config)
 
         output_log = "MIDIへの変換に成功しました。\n"
         output_log += '"5. Convert to DTX"タブに進んでください。\n\n'
         output_log += f"output_path: {output_path}\n"
     else:
         png_output_path = os.path.join(project_path, "spectrogram.png")
-        output_onset_image(input_path, png_output_path, hop_length, onset_delta, test_duration)
+        output_onset_image(
+            input_path,
+            png_output_path,
+            hop_length,
+            onset_delta,
+            test_offset,
+            test_duration)
 
         peak_output_path = os.path.join(project_path, "peak.mid")
-        convert_to_midi_peak(peak_output_path, input_path, bpm, resolution, threshold, segmentation, hop_length, onset_delta, test_duration)
+        convert_to_midi_peak(
+            peak_output_path,
+            input_path,
+            bpm,
+            resolution,
+            threshold,
+            hop_length,
+            test_offset,
+            test_duration)
 
         cqt_output_path = os.path.join(project_path, "cqt.mid")
-        convert_to_midi_cqt(cqt_output_path, input_path, bpm, resolution, threshold, segmentation, hop_length, onset_delta, test_duration)
+        convert_to_midi_cqt(
+            cqt_output_path,
+            input_path,
+            bpm,
+            resolution,
+            threshold,
+            hop_length,
+            test_offset,
+            test_duration)
 
         output_log = "テスト用のMIDIの作成に成功しました。\n\n"
         output_log += f"peak_output_path: {peak_output_path}\n"
