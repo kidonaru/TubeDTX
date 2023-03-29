@@ -181,6 +181,7 @@ with gr.Blocks() as demo:
                             midi_reset_pitch_button = gr.Button("Reset").style(full_width=False, size='sm')
                 with gr.Column():
                     midi_output = gr.Textbox(show_label=False)
+                    midi_output_image = gr.Image(show_label=False)
 
             text = "分離したドラム音をMIDIに変換します。\n\n"
 
@@ -537,6 +538,7 @@ with gr.Blocks() as demo:
                       outputs=[
                             base_output,
                             midi_output,
+                            midi_output_image,
                       ])
 
     midi_convert_test_button.click(convert_test_to_midi_gr,
@@ -544,6 +546,7 @@ with gr.Blocks() as demo:
                       outputs=[
                             base_output,
                             midi_output,
+                            midi_output_image,
                       ])
 
     midi_reset_pitch_button.click(reset_pitch_midi_gr,
@@ -551,6 +554,7 @@ with gr.Blocks() as demo:
                       outputs=[
                             base_output,
                             midi_output,
+                            midi_output_image,
 
                             midi_bd_min_slider,
                             midi_sn_min_slider,

@@ -88,11 +88,11 @@ class ProjectConfig(JsonConfig):
     midi_segmentation: float = 0.9
     midi_hop_length: int = 256
     midi_onset_delta: float = 0.03
-    midi_onset_range_min: int = 0
-    midi_onset_range_max: int = 2
+    midi_onset_range_min: int = -1
+    midi_onset_range_max: int = 1
     midi_velocity_max_percentile: int = 90
-    midi_test_offset: float = 0.0
-    midi_test_duration: float = 30.0
+    midi_test_offset: float = 30.0
+    midi_test_duration: float = 10.0
 
     bd_min: int = 36 # C1
     sn_min: int = 53 # F2

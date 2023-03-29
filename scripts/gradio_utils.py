@@ -9,7 +9,7 @@ from scripts.config_utils import ProjectConfig, app_config
 from scripts.debug_utils import debug_args
 from scripts.media_utils import create_preview_audio, download_video, extract_audio, get_video_info, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
-from scripts.convert_to_midi import convert_to_midi_cqt, convert_to_midi_drums, convert_to_midi_peak, output_onset_image
+from scripts.convert_to_midi import convert_to_midi_cqt, convert_to_midi_drums, convert_to_midi_peak, output_test_image
 from scripts.midi_to_dtx import midi_to_dtx
 from scripts.platform_utils import get_folder_path
 from scripts.separate_music import separate_music
@@ -334,17 +334,21 @@ def _convert_to_midi_gr(is_test, *args):
     onset_range_min = config.midi_onset_range_min
     onset_range_max = config.midi_onset_range_max
     velocity_max_percentile = config.midi_velocity_max_percentile
-    test_offset = config.midi_test_offset
-    test_duration = config.midi_test_duration
     bpm = config.dtx_bpm
 
     input_path = os.path.join(project_path, input_file_name)
+    test_image_path = None
 
     if not is_test:
         output_path = os.path.splitext(input_path)[0] + ".mid"
+        offset = 0
+        duration = None
+
         convert_to_midi_drums(
             output_path,
             input_path,
+            offset,
+            duration,
             bpm,
             resolution,
             threshold,
@@ -360,44 +364,66 @@ def _convert_to_midi_gr(is_test, *args):
         output_log += '"5. Convert to DTX"タブに進んでください。\n\n'
         output_log += f"output_path: {output_path}\n"
     else:
-        png_output_path = os.path.join(project_path, "spectrogram.png")
-        output_onset_image(
+        test_midi_path = os.path.join(project_path, "test.mid")
+        peak_midi_path = os.path.join(project_path, "peak.mid")
+        cqt_midi_path = os.path.join(project_path, "cqt.mid")
+        test_image_path = os.path.join(project_path, "test.png")
+        offset = config.midi_test_offset
+        duration = config.midi_test_duration
+
+        convert_to_midi_drums(
+            test_midi_path,
             input_path,
-            png_output_path,
+            offset,
+            duration,
+            bpm,
+            resolution,
+            threshold,
+            segmentation,
             hop_length,
             onset_delta,
-            test_offset,
-            test_duration)
+            onset_range_min,
+            onset_range_max,
+            velocity_max_percentile,
+            config)
 
-        peak_output_path = os.path.join(project_path, "peak.mid")
         convert_to_midi_peak(
-            peak_output_path,
+            peak_midi_path,
             input_path,
             bpm,
             resolution,
             threshold,
             hop_length,
-            test_offset,
-            test_duration)
+            offset,
+            duration)
 
-        cqt_output_path = os.path.join(project_path, "cqt.mid")
         convert_to_midi_cqt(
-            cqt_output_path,
+            cqt_midi_path,
             input_path,
             bpm,
             resolution,
             threshold,
             hop_length,
-            test_offset,
-            test_duration)
+            offset,
+            duration)
 
-        output_log = "テスト用のMIDIの作成に成功しました。\n\n"
-        output_log += f"peak_output_path: {peak_output_path}\n"
-        output_log += f"cqt_output_path: {cqt_output_path}\n"
+        output_test_image(
+            input_path,
+            test_midi_path,
+            peak_midi_path,
+            cqt_midi_path,
+            test_image_path,
+            hop_length,
+            onset_delta,
+            offset,
+            duration,
+            config)
+
+        output_log = "テスト用画像の作成に成功しました。"
 
     base_output_log = auto_save(config)
 
-    return [base_output_log, output_log]
+    return [base_output_log, output_log, test_image_path]
 
 @debug_args
 def convert_to_midi_gr(*args):
@@ -429,10 +455,12 @@ def reset_pitch_midi_gr(*args):
     base_output_log = auto_save(config)
 
     output_log = "音程情報のリセットが完了しました。"
+    output_image = None
 
     return [
         base_output_log,
         output_log,
+        output_image,
 
         config.bd_min,
         config.sn_min,
