@@ -1,11 +1,14 @@
 from dataclasses import asdict
 import datetime
+from multiprocessing import Pool
 import os
+import random
 import shutil
+import string
 import gradio as gr
 import requests
 
-from scripts.config_utils import ProjectConfig, app_config
+from scripts.config_utils import AppConfig, ProjectConfig, app_config
 from scripts.debug_utils import debug_args
 from scripts.media_utils import create_preview_audio, download_video, extract_audio, get_video_info, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
@@ -15,8 +18,7 @@ from scripts.platform_utils import get_folder_path
 from scripts.separate_music import separate_music
 
 @debug_args
-def auto_save(config: ProjectConfig):
-    project_path = app_config.project_path
+def auto_save(config: ProjectConfig, project_path: str):
     if not app_config.auto_save:
         return ""
 
@@ -36,7 +38,7 @@ def select_workspace_gr():
     app_config.workspace_path = workspace_path
     app_config.save(".")
 
-    output_log = f"Workspaceを開きました。{workspace_path}"
+    output_log = f"Workspaceを開きました。{workspace_path}\n\n"
 
     return [output_log, workspace_path]
 
@@ -53,7 +55,7 @@ def select_project_gr(evt: gr.SelectData):
     app_config.project_path = project_path
     app_config.save(".")
 
-    output_log = f"譜面をロードしました。\n\n{ProjectConfig.get_config_path(project_path)}"
+    output_log = f"譜面をロードしました。\n\n{ProjectConfig.get_config_path(project_path)}\n\n"
 
     return [
         output_log,
@@ -108,7 +110,7 @@ def new_score_gr(url: str):
     output_log = f"譜面ディレクトリを新規作成しました。\n"
     output_log += f'"1. Download Movie"タブから処理を開始してください。\n\n'
 
-    output_log += f"title: {new_score_name}"
+    output_log += f"title: {new_score_name}\n\n"
 
     return [output_log, project_path, app_config.get_current_preimage(), *asdict(config).values()]
 
@@ -121,8 +123,99 @@ def reload_workspace_gr():
     return gallery
 
 @debug_args
-def download_and_convert_video_gr(*args):
-    project_path = app_config.project_path
+def _batch_convert_gr(project_path):
+    config = ProjectConfig.load(project_path)
+
+    output_log = ""
+    output_log += f"==============================\n"
+    output_log += f"{config.dtx_title}\n"
+    output_log += f"==============================\n"
+
+    def check_converted(file_name, output_log):
+        output_path = os.path.join(project_path, file_name)
+        if app_config.batch_skip_converted and os.path.exists(output_path):
+            output_log += f"すでに変換済みのためスキップしました。({file_name})\n\n"
+            return True, output_log
+        else:
+            return False, output_log
+
+    if app_config.batch_download_movie:
+        is_converted, output_log = check_converted(config.bgm_name, output_log)
+        if not is_converted:
+            outputs = download_and_convert_video_gr(*config.to_dict().values(), project_path=project_path)
+            output_log += outputs[1]
+            config.dtx_title = outputs[2]
+            config.movie_thumbnail_file_name = outputs[3]
+
+    if app_config.batch_create_preview:
+        is_converted, output_log = check_converted(config.preview_output_name, output_log)
+        if not is_converted:
+            outputs = create_preview_gr(*config.to_dict().values(), project_path=project_path)
+            output_log += outputs[1]
+            config.preview_start_time = outputs[2]
+
+    if app_config.batch_separate_music:
+        is_converted, output_log = check_converted("drums.wav", output_log)
+        if not is_converted:
+            outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path)
+            output_log += outputs[1]
+            config.dtx_bpm = outputs[3]
+
+    if app_config.batch_convert_to_midi:
+        is_converted, output_log = check_converted("drums.mid", output_log)
+        if not is_converted:
+            outputs = convert_to_midi_gr(*config.to_dict().values(), project_path=project_path)
+            output_log += outputs[1]
+
+    if app_config.batch_convert_to_dtx:
+        is_converted, output_log = check_converted(config.dtx_output_name, output_log)
+        if not is_converted:
+            outputs = midi_to_dtx_gr(*config.to_dict().values(), project_path=project_path)
+            output_log += outputs[1]
+            config.dtx_shift_time = outputs[2]
+            config.dtx_align_nth_bd = outputs[3]
+
+    base_output_log = auto_save(config, project_path)
+
+    return [base_output_log, output_log, *config.to_dict().values()]
+
+@debug_args
+def batch_convert_selected_score_gr(*args):
+    global app_config
+    app_config = AppConfig(*args)
+    app_config.save(".")
+
+    outputs = _batch_convert_gr(app_config.project_path)
+
+    return outputs
+
+@debug_args
+def batch_convert_all_score_gr(*args):
+    global app_config
+    app_config = AppConfig(*args)
+    app_config.save(".")
+
+    project_paths = app_config.get_project_paths()
+
+    base_output_log = ""
+    output_log = ""
+
+    pool = Pool(app_config.batch_jobs)
+    result = pool.map(_batch_convert_gr, project_paths)
+
+    index = project_paths.index(app_config.project_path)
+    base_output_log = result[index][0]
+
+    for outputs in result:
+        output_log += outputs[1]
+
+    config = ProjectConfig.load(app_config.project_path)
+
+    return [base_output_log, output_log, *config.to_dict().values()]
+
+@debug_args
+def download_and_convert_video_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     url = config.movie_url
@@ -150,8 +243,8 @@ def download_and_convert_video_gr(*args):
     return [*outputs, title, thumbnail_path]
 
 @debug_args
-def convert_video_gr(*args):
-    project_path = app_config.project_path
+def convert_video_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     input_file_name = config.movie_download_file_name
@@ -172,13 +265,13 @@ def convert_video_gr(*args):
     output_log = "動画の処理に成功しました。\n"
     output_log += '"2. Create Preview File"タブに進んでください。\n\n'
 
-    base_output_log = auto_save(config)
+    base_output_log = auto_save(config, project_path)
 
     return [base_output_log, output_log, input_path, output_path, bgm_path]
 
 @debug_args
-def reload_video_gr(*args):
-    project_path = app_config.project_path
+def reload_video_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     input_file_name = config.movie_download_file_name
@@ -192,15 +285,16 @@ def reload_video_gr(*args):
     output_path = output_path if os.path.exists(output_path) else None
     bgm_path = bgm_path if os.path.exists(bgm_path) else None
 
-    output_log = "表示を更新しました。"
+    output_log = "表示を更新しました。\n\n"
 
-    base_output_log = auto_save(config)
+    base_output_log = auto_save(config, project_path)
 
     return [base_output_log, output_log, input_path, output_path, bgm_path]
 
 @debug_args
-def _create_preview_gr(config: ProjectConfig):
-    project_path = app_config.project_path
+def create_preview_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
+    config = ProjectConfig(*args)
 
     input_file_name = config.bgm_name
     output_file_name = config.preview_output_name
@@ -212,6 +306,14 @@ def _create_preview_gr(config: ProjectConfig):
     input_path = os.path.join(project_path, input_file_name)
     output_path = os.path.join(project_path, output_file_name)
 
+    output_log = "プレビューの作成に成功しました。\n"
+    output_log += '"3. Separate Music"タブに進んでください。\n\n'
+
+    if start_time == 0.0:
+        start_time = compute_chorus_time(input_path)
+        config.preview_start_time = start_time
+        output_log += f"start time: {start_time}\n\n"
+
     create_preview_audio(
         input_path,
         output_path,
@@ -221,42 +323,13 @@ def _create_preview_gr(config: ProjectConfig):
         fade_out_duration,
     )
 
-    output_log = "プレビューの作成に成功しました。\n"
-    output_log += '"3. Separate Music"タブに進んでください。\n\n'
+    base_output_log = auto_save(config, project_path)
 
-    base_output_log = auto_save(config)
-
-    return [base_output_log, output_log, input_path, output_path]
+    return [base_output_log, output_log, input_path, output_path, start_time]
 
 @debug_args
-def auto_create_preview_gr(*args):
-    project_path = app_config.project_path
-    config = ProjectConfig(*args)
-
-    input_file_name = config.bgm_name
-
-    input_path = os.path.join(project_path, input_file_name)
-
-    chorus_time = compute_chorus_time(input_path)
-    config.preview_start_time = chorus_time
-
-    outputs = _create_preview_gr(config)
-
-    outputs[1] += f"preview start time: {chorus_time}\n"
-
-    return [*outputs, chorus_time]
-
-@debug_args
-def create_preview_gr(*args):
-    config = ProjectConfig(*args)
-
-    outputs = _create_preview_gr(config)
-
-    return outputs
-
-@debug_args
-def reload_preview_gr(*args):
-    project_path = app_config.project_path
+def reload_preview_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     input_file_name = config.bgm_name
@@ -266,21 +339,24 @@ def reload_preview_gr(*args):
     output_path = os.path.join(project_path, output_file_name)
     output_path = output_path if os.path.exists(output_path) else None
 
-    output_log = "表示を更新しました。"
+    output_log = "表示を更新しました。\n\n"
 
-    base_output_log = auto_save(config)
+    base_output_log = auto_save(config, project_path)
 
     return [base_output_log, output_log, input_path, output_path]
 
-
+@debug_args
 def force_copy_file(input_path, output_path):
     if os.path.exists(output_path):
         os.remove(output_path)
     shutil.copyfile(input_path, output_path)
 
+def randomname(n):
+   return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
+
 @debug_args
-def separate_music_gr(*args):
-    project_path = app_config.project_path
+def separate_music_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     model = config.separate_model
@@ -296,33 +372,36 @@ def separate_music_gr(*args):
         os.mkdir(tmp_dir)
 
     # 全角文字が入ってるとコンバートに失敗するので作業ディレクトリに移動する
-    tmp_input_path = os.path.join(tmp_dir, bgm_name)
+    tmp_input_path = os.path.join(tmp_dir, randomname(10) + os.path.splitext(bgm_name)[1])
     force_copy_file(input_path, tmp_input_path)
 
     separate_music(model, tmp_dir, tmp_input_path, jobs)
 
     # 一時出力先パス
-    basename_without_ext = os.path.splitext(os.path.basename(input_path))[0]
+    basename_without_ext = os.path.splitext(os.path.basename(tmp_input_path))[0]
     tmp_output_path = os.path.join(tmp_dir, model, basename_without_ext, "drums.wav")
 
     # ファイルのコピー
     output_path = os.path.join(project_path, "drums.wav")
     force_copy_file(tmp_output_path, output_path)
 
+    # 一時ファイルの削除
+    os.remove(tmp_input_path)
     shutil.rmtree(os.path.join(tmp_dir, model))
 
     bpm = compute_bpm(output_path)
 
     output_log = "ドラム音の分離に成功しました。\n"
     output_log += '"4. Convert to MIDI"タブに進んでください。\n\n'
-    output_log += f"bpm: {bpm}\n"
+    output_log += f"bpm: {bpm}\n\n"
 
-    base_output_log = auto_save(config)
+    base_output_log = auto_save(config, project_path)
 
     return [base_output_log, output_log, output_path, bpm]
 
-def _convert_to_midi_gr(is_test, *args):
-    project_path = app_config.project_path
+@debug_args
+def _convert_to_midi_gr(*args, project_path=None, is_test=False):
+    project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     input_file_name = config.midi_input_name
@@ -362,7 +441,7 @@ def _convert_to_midi_gr(is_test, *args):
 
         output_log = "MIDIへの変換に成功しました。\n"
         output_log += '"5. Convert to DTX"タブに進んでください。\n\n'
-        output_log += f"output_path: {output_path}\n"
+        output_log += f"output_path: {output_path}\n\n"
     else:
         test_midi_path = os.path.join(project_path, "test.mid")
         peak_midi_path = os.path.join(project_path, "peak.mid")
@@ -419,23 +498,25 @@ def _convert_to_midi_gr(is_test, *args):
             duration,
             config)
 
-        output_log = "テスト用画像の作成に成功しました。"
+        output_log = "テスト用画像の作成に成功しました。\n\n"
 
-    base_output_log = auto_save(config)
+    base_output_log = auto_save(config, project_path)
 
     return [base_output_log, output_log, test_image_path]
 
 @debug_args
-def convert_to_midi_gr(*args):
-    is_test = False
-    return _convert_to_midi_gr(is_test, *args)
+def convert_to_midi_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
+    return _convert_to_midi_gr(*args, project_path=project_path, is_test=False)
 
 @debug_args
-def convert_test_to_midi_gr(*args):
-    is_test = True
-    return _convert_to_midi_gr(is_test, *args)
+def convert_test_to_midi_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
+    return _convert_to_midi_gr(*args, project_path=project_path, is_test=True)
 
-def reset_pitch_midi_gr(*args):
+@debug_args
+def reset_pitch_midi_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     default_config = ProjectConfig.get_default_config()
@@ -452,9 +533,9 @@ def reset_pitch_midi_gr(*args):
     config.lt_range = default_config.lt_range
     config.ft_range = default_config.ft_range
 
-    base_output_log = auto_save(config)
+    base_output_log = auto_save(config, project_path)
 
-    output_log = "音程情報のリセットが完了しました。"
+    output_log = "音程情報のリセットが完了しました。\n\n"
     output_image = None
 
     return [
@@ -476,8 +557,8 @@ def reset_pitch_midi_gr(*args):
     ]
 
 @debug_args
-def copy_resources(*args):
-    project_path = app_config.project_path
+def copy_resources(*args, project_path=None):
+    project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     for file in config.get_resources():
@@ -492,8 +573,8 @@ def copy_resources(*args):
     print(f"Resource copying is complete.")
 
 @debug_args
-def midi_to_dtx_gr(*args):
-    project_path = app_config.project_path
+def midi_to_dtx_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     input_file_name = config.dtx_input_name
@@ -514,11 +595,13 @@ def midi_to_dtx_gr(*args):
     output_log += 'アプリで譜面の確認をしてください。\n\n'
     output_log += f"{dtx_text}\n"
 
-    base_output_log = auto_save(config)
+    base_output_log = auto_save(config, project_path)
 
     return [base_output_log, output_log, dtx_info.SHIFT_TIME, dtx_info.ALIGN_NTH_BD, output_image_path]
 
-def reset_dtx_wav_gr(*args):
+@debug_args
+def reset_dtx_wav_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     default_config = ProjectConfig.get_default_config()
@@ -562,9 +645,9 @@ def reset_dtx_wav_gr(*args):
     config.lp_offset = default_config.lp_offset
     config.lbd_offset = default_config.lbd_offset
 
-    base_output_log = auto_save(config)
+    base_output_log = auto_save(config, project_path)
 
-    output_log = "チップ出力設定のリセットが完了しました。"
+    output_log = "チップ出力設定のリセットが完了しました。\n\n"
 
     return [
         base_output_log,

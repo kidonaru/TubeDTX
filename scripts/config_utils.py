@@ -259,6 +259,15 @@ class AppConfig(JsonConfig):
     workspace_path: str = ""
     auto_save: bool = True
 
+    batch_download_movie: bool = False
+    batch_create_preview: bool = False
+    batch_separate_music: bool = False
+    batch_convert_to_midi: bool = True
+    batch_convert_to_dtx: bool = True
+
+    batch_skip_converted: bool = False
+    batch_jobs: int = 1
+
     def get_project_paths(self):
         if not os.path.isdir(self.workspace_path):
             return []

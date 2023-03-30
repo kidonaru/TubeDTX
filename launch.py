@@ -1,13 +1,13 @@
 import gradio as gr
 
 from scripts.config_utils import ProjectConfig, app_config
-from scripts.gradio_utils import auto_create_preview_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
+from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
 
 config = ProjectConfig.load(app_config.project_path)
 
-def add_space(space_count: int):
+def add_space(space_count:int=1):
     for i in range(0, space_count):
         gr.HTML(value="")
 
@@ -28,26 +28,50 @@ with gr.Blocks() as demo:
                 with gr.Column(scale=1.5):
                     workspace_gallery = gr.Gallery(value=app_config.get_all_gallery()).style(grid=4, preview=True)
                 with gr.Column(scale=1):
-                    workspace_output = gr.Textbox(show_label=False)
-                    with gr.Row():
-                        with gr.Column(scale=5):
-                            workspace_path_textbox = gr.Textbox(label="Workspace Path", value=app_config.workspace_path)
-                        with gr.Column(scale=1, min_width=50):
-                            workspace_open_button = gr.Button("Open", variant="primary")
-                    with gr.Row():
-                        with gr.Column(scale=5):
-                            workspace_new_score_url_textbox = gr.Textbox(label="New Score from YouTube URL", value="")
-                        with gr.Column(scale=1, min_width=50):
-                            workspace_new_score_button = gr.Button("New", variant="primary")
-                    workspace_reload_button = gr.Button("Reload", variant="primary")
-                    workspace_video = gr.Video(source="upload")
+                    with gr.Tabs():
+                        with gr.TabItem("Base"):
+                            workspace_output = gr.Textbox(show_label=False)
+                            with gr.Row():
+                                with gr.Column(scale=5):
+                                    workspace_path_textbox = gr.Textbox(label="Workspace Path", value=app_config.workspace_path)
+                                with gr.Column(scale=1, min_width=50):
+                                    workspace_open_button = gr.Button("Open", variant="primary")
+                            with gr.Row():
+                                with gr.Column(scale=5):
+                                    workspace_new_score_url_textbox = gr.Textbox(label="New Score from YouTube URL", value="")
+                                with gr.Column(scale=1, min_width=50):
+                                    workspace_new_score_button = gr.Button("New", variant="primary")
+                            auto_save_checkbox = gr.Checkbox(value=app_config.auto_save, label="Auto Save", visible=False)
+                            workspace_reload_button = gr.Button("Reload", variant="primary")
+                            workspace_video = gr.Video(source="upload")
+                        with gr.TabItem("Batch"):
+                            batch_output = gr.Textbox(show_label=False)
+                            batch_download_movie_checkbox = gr.Checkbox(value=app_config.batch_download_movie, label="1. Download Movie")
+                            batch_create_preview_checkbox = gr.Checkbox(value=app_config.batch_create_preview, label="2. Create Preview File")
+                            batch_separate_music_checkbox = gr.Checkbox(value=app_config.batch_separate_music, label="3. Separate Music")
+                            batch_convert_to_midi_checkbox = gr.Checkbox(value=app_config.batch_convert_to_midi, label="4. Convert to MIDI")
+                            batch_convert_to_dtx_checkbox = gr.Checkbox(value=app_config.batch_convert_to_dtx, label="5. Convert to DTX")
+
+                            with gr.Row():
+                                batch_skip_converted_checkbox = gr.Checkbox(value=app_config.batch_skip_converted, label="Skip Converted")
+                                batch_jobs_slider = gr.Slider(1, 32, value=app_config.batch_jobs, step=1, label="Batch Jobs")
+
+                            with gr.Row():
+                                batch_convert_selected_score_button = gr.Button("Batch Convert Selected Score", variant="primary")
+                                batch_convert_all_score_button = gr.Button("Batch Convert All Score", variant="primary")
 
             text = "作業ディレクトリの選択と新規譜面の作成ができます。\n\n"
 
             text += "まず、\"Open\"ボタンを押して。作成する譜面を格納するディレクトリを選択してください\n"
-            text += "次に、\"New Score from YouTube URL\"に譜面にしたい動画のURLを入力して\"New\"ボタンを押します。\n\n"
-
+            text += "次に、\"New Score from YouTube URL\"に譜面にしたい動画のURLを入力して\"New\"ボタンを押します。\n"
             text += "\"Reload\"ボタンを押すと、譜面リストの再読み込みを行います。\n\n"
+
+            text += "\"Batch\"タブでは、全譜面に対して一括で処理を実行できます。\n"
+            text += "実行したいタブ名にチェックを入れると、その処理をバッチで実行します。\n"
+            text += "\"Batch Convert Selected Score\"ボタンを押すと、選択中の譜面に対してバッチ処理を行います。\n"
+            text += "\"Batch Convert All Score\"ボタンを押すと、ワークスペース内全譜面に対してバッチ処理を行います。\n"
+            text += "\"Skip Converted\"のチェックを入れると、すでに変換済みの譜面はスキップされます。\n\n"
+            text += "\"Batch Jobs\"で並列実行数を設定できます。\n\n"
 
             gr.TextArea(text, show_label=False)
         with gr.TabItem("1. Download Movie"):
@@ -79,7 +103,7 @@ with gr.Blocks() as demo:
                     movie_output_video = gr.Video(label="Result", source="upload")
                     movie_output_audio = gr.Audio(label="Result", source="upload", type="filepath")
 
-            text = "動画の前処理を行います。\n\n"
+            text = "動画のダウンロードと変換処理を行います。\n\n"
             text += "\"Download & Convert\"ボタンを押すと、動画をダウンロードして、指定時間で動画を切り取り、BGMを吐き出します。\n"
             text += "\"Convert\"ボタンを押すと、ダウンロード処理を飛ばして変換処理のみを行います。\n"
             text += "\"Refresh\"ボタンを押すと、表示を更新します。\n\n"
@@ -93,7 +117,6 @@ with gr.Blocks() as demo:
                 with gr.Column():
                     add_space(1)
                     with gr.Row():
-                        preview_auto_create_button = gr.Button("Auto Create", variant="primary")
                         preview_create_button = gr.Button("Create", variant="primary")
                     with gr.Row():
                         preview_reload_button = gr.Button("Refresh")
@@ -110,11 +133,10 @@ with gr.Blocks() as demo:
 
             text = "プレビュー用の音声ファイルを作成します。\n\n"
 
-            text += "\"Auto Create\"ボタンを押すと、サビ時間を推定してプレビュー用の音声ファイルを作成します。\n"
             text += "\"Create\"ボタンを押すと、手動設定で音声ファイルを作成します。\n"
             text += "\"Refresh\"ボタンを押すと、表示を更新します。\n\n"
 
-            text += "- Preview Start Time: プレビューの開始時間\n"
+            text += "- Preview Start Time: プレビューの開始時間。0の場合自動で推定して設定します\n"
             text += "- Preview Duration: プレビューの再生時間\n"
             text += "- Fade In/Out Duration: フェードイン/アウトの時間\n\n"
             gr.TextArea(text, show_label=False)
@@ -302,6 +324,21 @@ with gr.Blocks() as demo:
             text += "Chipsタブでチップ音のファイル名、音量、開始時間を編集できます\n"
             gr.TextArea(text, show_label=False)
 
+    app_config_inputs = [
+        project_path_textbox,
+        workspace_path_textbox,
+        auto_save_checkbox,
+
+        batch_download_movie_checkbox,
+        batch_create_preview_checkbox,
+        batch_separate_music_checkbox,
+        batch_convert_to_midi_checkbox,
+        batch_convert_to_dtx_checkbox,
+
+        batch_skip_converted_checkbox,
+        batch_jobs_slider,
+    ]
+
     dtx_wav_inputs = [
         dtx_hhc_wav_textbox,
         dtx_snare_wav_textbox,
@@ -464,6 +501,22 @@ with gr.Blocks() as demo:
                                   inputs=[],
                                   outputs=workspace_gallery)
 
+    batch_convert_selected_score_button.click(batch_convert_selected_score_gr,
+                                            inputs=app_config_inputs,
+                                            outputs=[
+                                                    base_output,
+                                                    batch_output,
+                                                    *inputs,
+                                            ])
+
+    batch_convert_all_score_button.click(batch_convert_all_score_gr,
+                                            inputs=app_config_inputs,
+                                            outputs=[
+                                                    base_output,
+                                                    batch_output,
+                                                    *inputs,
+                                            ])
+
     movie_download_button.click(download_and_convert_video_gr,
                           inputs=inputs,
                           outputs=[
@@ -496,16 +549,6 @@ with gr.Blocks() as demo:
                                 movie_output_audio,
                           ])
 
-    preview_auto_create_button.click(auto_create_preview_gr,
-                      inputs=inputs,
-                      outputs=[
-                            base_output,
-                            preview_output,
-                            preview_input_audio,
-                            preview_output_audio,
-                            preview_start_time_slider,
-                      ])
-
     preview_create_button.click(create_preview_gr,
                       inputs=inputs,
                       outputs=[
@@ -513,6 +556,7 @@ with gr.Blocks() as demo:
                             preview_output,
                             preview_input_audio,
                             preview_output_audio,
+                            preview_start_time_slider,
                       ])
 
     preview_reload_button.click(reload_preview_gr,
