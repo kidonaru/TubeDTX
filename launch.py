@@ -11,7 +11,7 @@ def add_space(space_count:int=1):
     for i in range(0, space_count):
         gr.HTML(value="")
 
-with gr.Blocks() as demo:
+with gr.Blocks(title="TubeDTX") as demo:
     gr.Markdown("TubeDTX")
 
     with gr.Row():
@@ -177,8 +177,8 @@ with gr.Blocks() as demo:
                                 midi_hop_length_slider = gr.Slider(1, 512, step=1, value=config.midi_hop_length, label="Hop Length")
                                 midi_onset_delta_slider = gr.Slider(0, 1, step=0.01, value=config.midi_onset_delta, label="Onset Delta")
                             with gr.Row():
-                                midi_onset_range_min_slider = gr.Slider(-8, 0, step=1, value=config.midi_onset_range_min, label="Onset Range Min")
-                                midi_onset_range_max_slider = gr.Slider(0, 8, step=1, value=config.midi_onset_range_max, label="Onset Range Max")
+                                midi_disable_hh_frame_slider = gr.Slider(0, 10, step=1, value=config.midi_disable_hh_frame, label="Disable HH Frame")
+                                midi_adjust_offset_frame_slider = gr.Slider(0, 10, step=1, value=config.midi_adjust_offset_frame, label="Adjust Offset Frame")
                             with gr.Row():
                                 midi_velocity_max_percentile_slider = gr.Slider(0, 100, step=1, value=config.midi_velocity_max_percentile, label="Velocity Max Percentile")
                             with gr.Row():
@@ -207,17 +207,19 @@ with gr.Blocks() as demo:
 
             text = "分離したドラム音をMIDIに変換します。\n\n"
 
-            text += "\"Convert\"ボタンを押すと、音程を解析してDTX変換用のMIDIを出力します。\n"
-            text += "\"Convert Test\"ボタンを押すと、音程確認用の下記MIDIファイルを出力します。\n"
-            text += "- peak.mid: 音程のピーク値をMIDI化したファイル\n"
-            text += "- cqt.mid: 定Q変換してMIDI化したファイル\n\n"
+            text += "\"Convert\"ボタンを押すと、音高を解析してDTX変換用のMIDIを出力します。\n"
+            text += "\"Convert Test\"ボタンを押すと、音高確認用の画像ファイルを出力します。\n\n"
 
             text += "各パラメータの説明\n"
             text += "- Threshold: 変換しきい値。下げると小さい音も拾いやすくなりますが、ノイズも乗りやすくなります\n"
             text += "- Segmentation: ノーツの分裂しやすさ。上げると連打系が拾いやすくなりますが、ノイズも乗りやすくなります\n"
-            text += "- Adjust Velocity: Velocityを計算するときの補正値\n\n"
+            text += "- Hop Length: 解析時の移動幅(フレーム数)\n"
+            text += "- Onset Delta: Onset検出の感度。下げると小さい音も拾いやすくなりますが、ノイズも乗りやすくなります\n"
+            text += "- Disable HH Frame: 指定フレーム内にノーツがある場合、ハイハットを無効化します\n"
+            text += "- Adjust Offset Frame: Onsetに合わせて調整する最大フレーム数\n"
+            text += "- Velocity Max Percentile: Velocityの最大値に対応するnパーセンタイル\n\n"
 
-            text += "Pitchタブで各チャンネルの基準音程を変更できます。\n"
+            text += "Pitchタブで各チャンネルの基準音高を変更できます。\n"
             gr.TextArea(text, show_label=False)
         with gr.TabItem("5. Convert to DTX"):
             with gr.Row():
@@ -264,7 +266,7 @@ with gr.Blocks() as demo:
                             with gr.Row():
                                 dtx_bd_wav_textbox = gr.Textbox(label="BassDrum", value=config.bd_wav)
                                 dtx_bd_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.bd_volume)
-                                dtx_bd_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.bd_offset)
+                                dtx_bd_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.bd_offset2)
                             with gr.Row():
                                 dtx_ht_wav_textbox = gr.Textbox(label="HighTom", value=config.ht_wav)
                                 dtx_ht_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.ht_volume)
@@ -408,8 +410,8 @@ with gr.Blocks() as demo:
         midi_segmentation_slider,
         midi_hop_length_slider,
         midi_onset_delta_slider,
-        midi_onset_range_min_slider,
-        midi_onset_range_max_slider,
+        midi_disable_hh_frame_slider,
+        midi_adjust_offset_frame_slider,
         midi_velocity_max_percentile_slider,
         midi_test_offset_slider,
         midi_test_duration_slider,

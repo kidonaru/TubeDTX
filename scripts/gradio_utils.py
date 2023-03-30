@@ -410,8 +410,8 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
     segmentation = config.midi_segmentation
     hop_length = config.midi_hop_length
     onset_delta = config.midi_onset_delta
-    onset_range_min = config.midi_onset_range_min
-    onset_range_max = config.midi_onset_range_max
+    disable_hh_frame = config.midi_disable_hh_frame
+    adjust_offset_frame = config.midi_adjust_offset_frame
     velocity_max_percentile = config.midi_velocity_max_percentile
     bpm = config.dtx_bpm
 
@@ -434,8 +434,8 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
             segmentation,
             hop_length,
             onset_delta,
-            onset_range_min,
-            onset_range_max,
+            disable_hh_frame,
+            adjust_offset_frame,
             velocity_max_percentile,
             config)
 
@@ -461,8 +461,8 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
             segmentation,
             hop_length,
             onset_delta,
-            onset_range_min,
-            onset_range_max,
+            disable_hh_frame,
+            adjust_offset_frame,
             velocity_max_percentile,
             config)
 
@@ -633,7 +633,7 @@ def reset_dtx_wav_gr(*args, project_path=None):
 
     config.hhc_offset = default_config.hhc_offset
     config.snare_offset = default_config.snare_offset
-    config.bd_offset = default_config.bd_offset
+    config.bd_offset2 = default_config.bd_offset2
     config.ht_offset = default_config.ht_offset
     config.lt_offset = default_config.lt_offset
     config.cymbal_offset = default_config.cymbal_offset
@@ -680,7 +680,7 @@ def reset_dtx_wav_gr(*args, project_path=None):
 
         config.hhc_offset,
         config.snare_offset,
-        config.bd_offset,
+        config.bd_offset2,
         config.ht_offset,
         config.lt_offset,
         config.cymbal_offset,
