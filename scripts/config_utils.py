@@ -259,13 +259,13 @@ class AppConfig(JsonConfig):
     workspace_path: str = ""
     auto_save: bool = True
 
-    batch_download_movie: bool = False
-    batch_create_preview: bool = False
-    batch_separate_music: bool = False
+    batch_download_movie: bool = True
+    batch_create_preview: bool = True
+    batch_separate_music: bool = True
     batch_convert_to_midi: bool = True
     batch_convert_to_dtx: bool = True
 
-    batch_skip_converted: bool = False
+    batch_skip_converted: bool = True
     batch_jobs: int = 1
 
     def get_project_paths(self):

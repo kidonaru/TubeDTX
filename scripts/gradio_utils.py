@@ -63,7 +63,7 @@ def select_project_gr(evt: gr.SelectData):
         app_config.get_current_preimage(),
         app_config.get_current_movie(),
         *asdict(config).values(),
-        *([None] * 12),
+        *([None] * 13),
     ]
 
 @debug_args
@@ -593,11 +593,10 @@ def midi_to_dtx_gr(*args, project_path=None):
 
     output_log = "DTX譜面の作成に成功しました。\n"
     output_log += 'アプリで譜面の確認をしてください。\n\n'
-    output_log += f"{dtx_text}\n"
 
     base_output_log = auto_save(config, project_path)
 
-    return [base_output_log, output_log, dtx_info.SHIFT_TIME, dtx_info.ALIGN_NTH_BD, output_image_path]
+    return [base_output_log, output_log, dtx_info.SHIFT_TIME, dtx_info.ALIGN_NTH_BD, dtx_text, output_image_path]
 
 @debug_args
 def reset_dtx_wav_gr(*args, project_path=None):

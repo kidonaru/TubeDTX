@@ -306,6 +306,7 @@ with gr.Blocks() as demo:
                             dtx_reset_wav_button2 = gr.Button("Reset").style(full_width=False, size='sm')
                 with gr.Column():
                     dtx_output = gr.Textbox(show_label=False)
+                    dtx_output_score = gr.Textbox(show_label=False)
                     dtx_output_image = gr.Image(show_label=False)
 
             text = "MIDIをDTXに変換します。\n\n"
@@ -465,6 +466,7 @@ with gr.Blocks() as demo:
         midi_output,
 
         dtx_output,
+        dtx_output_score,
         dtx_output_image,
     ]
 
@@ -620,6 +622,7 @@ with gr.Blocks() as demo:
                             dtx_output,
                             dtx_shift_time_slider,
                             dtx_align_nth_bd_slider,
+                            dtx_output_score,
                             dtx_output_image,
                       ])
 
