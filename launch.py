@@ -1,7 +1,7 @@
 import gradio as gr
 
 from scripts.config_utils import ProjectConfig, app_config
-from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
+from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
 
@@ -217,7 +217,9 @@ with gr.Blocks(title="TubeDTX") as demo:
             text += "- Onset Delta: Onset検出の感度。下げると小さい音も拾いやすくなりますが、ノイズも乗りやすくなります\n"
             text += "- Disable HH Frame: 指定フレーム内にノーツがある場合、ハイハットを無効化します\n"
             text += "- Adjust Offset Frame: Onsetに合わせて調整する最大フレーム数\n"
-            text += "- Velocity Max Percentile: Velocityの最大値に対応するnパーセンタイル\n\n"
+            text += "- Velocity Max Percentile: Velocityの最大値に対応するnパーセンタイル\n"
+            text += "- Test Offset: 音高確認画像の開始位置(秒)\n"
+            text += "- Test Duration: 音高確認画像の再生時間(秒)\n\n"
 
             text += "Pitchタブで各チャンネルの基準音高を変更できます。\n"
             gr.TextArea(text, show_label=False)
@@ -225,7 +227,9 @@ with gr.Blocks(title="TubeDTX") as demo:
             with gr.Row():
                 with gr.Column():
                     add_space(1)
-                    dtx_convert_button = gr.Button("Convert", variant="primary")
+                    with gr.Row():
+                        dtx_convert_button = gr.Button("Convert", variant="primary")
+                        dtx_convert_and_output_image_button = gr.Button("Convert And Output Image", variant="primary")
                     with gr.Tabs():
                         with gr.TabItem("Base"):
                             with gr.Row():
@@ -248,7 +252,6 @@ with gr.Blocks(title="TubeDTX") as demo:
                             with gr.Row():
                                 dtx_wav_splits_slider = gr.Slider(1, 10, value=config.dtx_wav_splits, step=1, label="Wav Splits")
                                 dtx_wav_volume_slider = gr.Slider(0, 100, value=config.dtx_wav_volume, step=1, label="Wav Volume")
-                            dtx_output_image_checkbox = gr.Checkbox(value=config.dtx_show_image, label="Output Image")
                         with gr.TabItem("Header"):
                             dtx_title_textbox = gr.Textbox(label="Music Title", value=config.dtx_title)
                             dtx_artist_textbox = gr.Textbox(label="Artist", value=config.dtx_artist)
@@ -313,15 +316,19 @@ with gr.Blocks(title="TubeDTX") as demo:
 
             text = "MIDIをDTXに変換します。\n\n"
 
+            text += "\"Convert\"ボタンを押すと、MIDIからDTX譜面を出力します。\n"
+            text += "\"Convert And Output Image\"ボタンを押すと、譜面を画像化したものも同時に出力します。(時間がかかります)\n\n"
+
             text += "- Chip Resolution: チップ配置の解像度\n"
             text += "- BGM Resolution: チップ配置の解像度\n"
             text += "- Shift Time: チップ全体を指定時間(秒)ずらします\n"
             text += "- Auto Shift Time: Shift Timeを自動調整します\n"
             text += "- Align Nth BD: 指定番目のバスドラムのチップ位置を、小節開始位置に設定します\n"
             text += "- Auto Align Nth BD: Align Nth BDを自動調整します\n"
-            text += "- BGM Offset: BGMの開始位置を調整します\n"
-            text += "- BGM Volume: BGMの音量を調整します\n"
-            text += "- Show Image: DTX譜面を画像化して出力します。時間かかるので2回目以降は外すのを推奨\n\n"
+            text += "- BGM Offset: BGMの開始位置を調整します(秒)\n"
+            text += "- BGM Volume: BGMの音量\n"
+            text += "- Wav Splits: WAVの音量による分割数\n"
+            text += "- Wav Volume: WAVの最大音量\n\n"
 
             text += "Headerタブでヘッダー情報を編集できます\n"
             text += "Chipsタブでチップ音のファイル名、音量、開始時間を編集できます\n"
@@ -442,7 +449,6 @@ with gr.Blocks(title="TubeDTX") as demo:
         dtx_bgm_volume_slider,
         dtx_wav_splits_slider,
         dtx_wav_volume_slider,
-        dtx_output_image_checkbox,
 
         dtx_title_textbox,
         dtx_artist_textbox,
@@ -618,6 +624,17 @@ with gr.Blocks(title="TubeDTX") as demo:
                       ])
 
     dtx_convert_button.click(midi_to_dtx_gr,
+                      inputs=inputs,
+                      outputs=[
+                            base_output,
+                            dtx_output,
+                            dtx_shift_time_slider,
+                            dtx_align_nth_bd_slider,
+                            dtx_output_score,
+                            dtx_output_image,
+                      ])
+
+    dtx_convert_and_output_image_button.click(midi_to_dtx_and_output_image_gr,
                       inputs=inputs,
                       outputs=[
                             base_output,

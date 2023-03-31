@@ -120,7 +120,6 @@ class ProjectConfig(JsonConfig):
     dtx_bgm_volume: int = 100
     dtx_wav_splits: int = 4
     dtx_wav_volume: int = 80
-    dtx_show_image: bool = False
 
     dtx_title: str = "Sample Music"
     dtx_artist: str = ""
