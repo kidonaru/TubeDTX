@@ -73,15 +73,15 @@ pitch_to_channel = {
 
 note_color_map = {
     1: "red",
-    2: "blue",
+    2: "skyblue",
     3: "pink",
     4: "yellow",
-    5: "green",
-    6: "purple",
+    5: "lightgreen",
+    6: "violet",
     7: "red",
     8: "orange",
-    9: "blue",
-    10: "blue",
+    9: "skyblue",
+    10: "skyblue",
 }
 
 @dataclass
@@ -159,11 +159,11 @@ class DtxChip:
 def _clamp(n, smallest, largest):
     return sorted([smallest, n, largest])[1]
 
-def auto_shift_time(bd_notes, chip_timings_list, dtx_info: DtxInfo, shift_time, measure_time):
+def auto_shift_time(bd_notes, chip_timings_list, dtx_info: DtxInfo, measure_time):
     beat_pos_zero_count_list = []
     nth_bd_start = bd_notes[dtx_info.ALIGN_NTH_BD - 1].start if dtx_info.ALIGN_NTH_BD > 0 else 0
     for i in range(0, 20):
-        auto_shift_time = shift_time + (i - 10) * 0.01 + measure_time * (nth_bd_start // measure_time + 1) - nth_bd_start
+        auto_shift_time = (i - 10) * 0.01 + measure_time * (nth_bd_start // measure_time + 1) - nth_bd_start
         beat_pos_zero_count = 0
 
         for current_time, next_time, current_measure, beat_pos in chip_timings_list:
@@ -177,7 +177,7 @@ def auto_shift_time(bd_notes, chip_timings_list, dtx_info: DtxInfo, shift_time, 
         beat_pos_zero_count_list.append(beat_pos_zero_count)
 
     index = int(np.argmax(beat_pos_zero_count_list))
-    best_shift_time = shift_time + (index - 10) * 0.01
+    best_shift_time = (index - 10) * 0.01
     best_zero_count = beat_pos_zero_count_list[index]
 
     print(f"beat_pos_zero_count_list: {beat_pos_zero_count_list}")
@@ -327,7 +327,7 @@ def midi_to_dtx(midi_file, output_path, output_image_path, dtx_info: DtxInfo):
         beat_pos_zero_count_list = []
         for i in range(0, 5):
             dtx_info.ALIGN_NTH_BD = i + 1
-            _, zero_count = auto_shift_time(bd_notes, chip_timings_list, dtx_info, shift_time, measure_time)
+            _, zero_count = auto_shift_time(bd_notes, chip_timings_list, dtx_info, measure_time)
             beat_pos_zero_count_list.append(zero_count)
 
         dtx_info.ALIGN_NTH_BD = int(np.argmax(beat_pos_zero_count_list)) + 1
@@ -336,7 +336,7 @@ def midi_to_dtx(midi_file, output_path, output_image_path, dtx_info: DtxInfo):
         print(f"best align_nth_bd: {dtx_info.ALIGN_NTH_BD}")
 
     if dtx_info.AUTO_SHIFT_TIME:
-        dtx_info.SHIFT_TIME, zero_count = auto_shift_time(bd_notes, chip_timings_list, dtx_info, shift_time, measure_time)
+        dtx_info.SHIFT_TIME, zero_count = auto_shift_time(bd_notes, chip_timings_list, dtx_info, measure_time)
         shift_time = dtx_info.SHIFT_TIME
 
     if dtx_info.ALIGN_NTH_BD > 0:

@@ -86,7 +86,13 @@ class ProjectConfig(JsonConfig):
     midi_resolution: int = 8
     midi_threshold: float = 0.2
     midi_segmentation: float = 0.9
-    midi_adjust_velocity: float = 0.3
+    midi_hop_length: int = 256
+    midi_onset_delta: float = 0.03
+    midi_disable_hh_frame: int = 1
+    midi_adjust_offset_frame: int = 5
+    midi_velocity_max_percentile: int = 90
+    midi_test_offset: float = 30.0
+    midi_test_duration: float = 10.0
 
     bd_min: int = 36 # C1
     sn_min: int = 53 # F2
@@ -114,7 +120,6 @@ class ProjectConfig(JsonConfig):
     dtx_bgm_volume: int = 100
     dtx_wav_splits: int = 4
     dtx_wav_volume: int = 80
-    dtx_show_image: bool = False
 
     dtx_title: str = "Sample Music"
     dtx_artist: str = ""
@@ -149,7 +154,7 @@ class ProjectConfig(JsonConfig):
 
     hhc_offset: float = 0.0
     snare_offset: float = 0.0
-    bd_offset: float = 0.03
+    bd_offset2: float = 0.0
     ht_offset: float = 0.0
     lt_offset: float = 0.0
     cymbal_offset: float = 0.0
@@ -208,7 +213,7 @@ class ProjectConfig(JsonConfig):
 
             HHC_OFFSET = self.hhc_offset,
             SNARE_OFFSET = self.snare_offset,
-            BD_OFFSET = self.bd_offset,
+            BD_OFFSET = self.bd_offset2,
             HT_OFFSET = self.ht_offset,
             LT_OFFSET = self.lt_offset,
             CYMBAL_OFFSET = self.cymbal_offset,
@@ -252,6 +257,15 @@ class AppConfig(JsonConfig):
     project_path: str = ""
     workspace_path: str = ""
     auto_save: bool = True
+
+    batch_download_movie: bool = True
+    batch_create_preview: bool = True
+    batch_separate_music: bool = True
+    batch_convert_to_midi: bool = True
+    batch_convert_to_dtx: bool = True
+
+    batch_skip_converted: bool = True
+    batch_jobs: int = 1
 
     def get_project_paths(self):
         if not os.path.isdir(self.workspace_path):

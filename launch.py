@@ -1,17 +1,17 @@
 import gradio as gr
 
 from scripts.config_utils import ProjectConfig, app_config
-from scripts.gradio_utils import auto_create_preview_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
+from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
 
 config = ProjectConfig.load(app_config.project_path)
 
-def add_space(space_count: int):
+def add_space(space_count:int=1):
     for i in range(0, space_count):
         gr.HTML(value="")
 
-with gr.Blocks() as demo:
+with gr.Blocks(title="TubeDTX") as demo:
     gr.Markdown("TubeDTX")
 
     with gr.Row():
@@ -28,26 +28,50 @@ with gr.Blocks() as demo:
                 with gr.Column(scale=1.5):
                     workspace_gallery = gr.Gallery(value=app_config.get_all_gallery()).style(grid=4, preview=True)
                 with gr.Column(scale=1):
-                    workspace_output = gr.Textbox(show_label=False)
-                    with gr.Row():
-                        with gr.Column(scale=5):
-                            workspace_path_textbox = gr.Textbox(label="Workspace Path", value=app_config.workspace_path)
-                        with gr.Column(scale=1, min_width=50):
-                            workspace_open_button = gr.Button("Open", variant="primary")
-                    with gr.Row():
-                        with gr.Column(scale=5):
-                            workspace_new_score_url_textbox = gr.Textbox(label="New Score from YouTube URL", value="")
-                        with gr.Column(scale=1, min_width=50):
-                            workspace_new_score_button = gr.Button("New", variant="primary")
-                    workspace_reload_button = gr.Button("Reload", variant="primary")
-                    workspace_video = gr.Video(source="upload")
+                    with gr.Tabs():
+                        with gr.TabItem("Base"):
+                            workspace_output = gr.Textbox(show_label=False)
+                            with gr.Row():
+                                with gr.Column(scale=5):
+                                    workspace_path_textbox = gr.Textbox(label="Workspace Path", value=app_config.workspace_path)
+                                with gr.Column(scale=1, min_width=50):
+                                    workspace_open_button = gr.Button("Open", variant="primary")
+                            with gr.Row():
+                                with gr.Column(scale=5):
+                                    workspace_new_score_url_textbox = gr.Textbox(label="New Score from YouTube URL", value="")
+                                with gr.Column(scale=1, min_width=50):
+                                    workspace_new_score_button = gr.Button("New", variant="primary")
+                            auto_save_checkbox = gr.Checkbox(value=app_config.auto_save, label="Auto Save", visible=False)
+                            workspace_reload_button = gr.Button("Reload", variant="primary")
+                            workspace_video = gr.Video(source="upload")
+                        with gr.TabItem("Batch"):
+                            batch_output = gr.Textbox(show_label=False)
+                            batch_download_movie_checkbox = gr.Checkbox(value=app_config.batch_download_movie, label="1. Download Movie")
+                            batch_create_preview_checkbox = gr.Checkbox(value=app_config.batch_create_preview, label="2. Create Preview File")
+                            batch_separate_music_checkbox = gr.Checkbox(value=app_config.batch_separate_music, label="3. Separate Music")
+                            batch_convert_to_midi_checkbox = gr.Checkbox(value=app_config.batch_convert_to_midi, label="4. Convert to MIDI")
+                            batch_convert_to_dtx_checkbox = gr.Checkbox(value=app_config.batch_convert_to_dtx, label="5. Convert to DTX")
+
+                            with gr.Row():
+                                batch_skip_converted_checkbox = gr.Checkbox(value=app_config.batch_skip_converted, label="Skip Converted")
+                                batch_jobs_slider = gr.Slider(1, 32, value=app_config.batch_jobs, step=1, label="Batch Jobs")
+
+                            with gr.Row():
+                                batch_convert_selected_score_button = gr.Button("Batch Convert Selected Score", variant="primary")
+                                batch_convert_all_score_button = gr.Button("Batch Convert All Score", variant="primary")
 
             text = "作業ディレクトリの選択と新規譜面の作成ができます。\n\n"
 
             text += "まず、\"Open\"ボタンを押して。作成する譜面を格納するディレクトリを選択してください\n"
-            text += "次に、\"New Score from YouTube URL\"に譜面にしたい動画のURLを入力して\"New\"ボタンを押します。\n\n"
-
+            text += "次に、\"New Score from YouTube URL\"に譜面にしたい動画のURLを入力して\"New\"ボタンを押します。\n"
             text += "\"Reload\"ボタンを押すと、譜面リストの再読み込みを行います。\n\n"
+
+            text += "\"Batch\"タブでは、全譜面に対して一括で処理を実行できます。\n"
+            text += "実行したいタブ名にチェックを入れると、その処理をバッチで実行します。\n"
+            text += "\"Batch Convert Selected Score\"ボタンを押すと、選択中の譜面に対してバッチ処理を行います。\n"
+            text += "\"Batch Convert All Score\"ボタンを押すと、ワークスペース内全譜面に対してバッチ処理を行います。\n"
+            text += "\"Skip Converted\"のチェックを入れると、すでに変換済みの譜面はスキップされます。\n\n"
+            text += "\"Batch Jobs\"で並列実行数を設定できます。\n\n"
 
             gr.TextArea(text, show_label=False)
         with gr.TabItem("1. Download Movie"):
@@ -79,7 +103,7 @@ with gr.Blocks() as demo:
                     movie_output_video = gr.Video(label="Result", source="upload")
                     movie_output_audio = gr.Audio(label="Result", source="upload", type="filepath")
 
-            text = "動画の前処理を行います。\n\n"
+            text = "動画のダウンロードと変換処理を行います。\n\n"
             text += "\"Download & Convert\"ボタンを押すと、動画をダウンロードして、指定時間で動画を切り取り、BGMを吐き出します。\n"
             text += "\"Convert\"ボタンを押すと、ダウンロード処理を飛ばして変換処理のみを行います。\n"
             text += "\"Refresh\"ボタンを押すと、表示を更新します。\n\n"
@@ -93,7 +117,6 @@ with gr.Blocks() as demo:
                 with gr.Column():
                     add_space(1)
                     with gr.Row():
-                        preview_auto_create_button = gr.Button("Auto Create", variant="primary")
                         preview_create_button = gr.Button("Create", variant="primary")
                     with gr.Row():
                         preview_reload_button = gr.Button("Refresh")
@@ -110,11 +133,10 @@ with gr.Blocks() as demo:
 
             text = "プレビュー用の音声ファイルを作成します。\n\n"
 
-            text += "\"Auto Create\"ボタンを押すと、サビ時間を推定してプレビュー用の音声ファイルを作成します。\n"
             text += "\"Create\"ボタンを押すと、手動設定で音声ファイルを作成します。\n"
             text += "\"Refresh\"ボタンを押すと、表示を更新します。\n\n"
 
-            text += "- Preview Start Time: プレビューの開始時間\n"
+            text += "- Preview Start Time: プレビューの開始時間。0の場合自動で推定して設定します\n"
             text += "- Preview Duration: プレビューの再生時間\n"
             text += "- Fade In/Out Duration: フェードイン/アウトの時間\n\n"
             gr.TextArea(text, show_label=False)
@@ -147,11 +169,21 @@ with gr.Blocks() as demo:
                     with gr.Tabs():
                         with gr.TabItem("Base"):
                             midi_input_name_textbox = gr.Textbox(label="Input File Name", value=config.midi_input_name)
-                            midi_resolution_slider = gr.Slider(0, 16, value=config.midi_resolution, label="Resolution")
+                            midi_resolution_slider = gr.Slider(0, 16, step=1, value=config.midi_resolution, label="Resolution")
                             with gr.Row():
                                 midi_threshold_slider = gr.Slider(0, 1, value=config.midi_threshold, label="Threshold")
                                 midi_segmentation_slider = gr.Slider(0, 1, value=config.midi_segmentation, label="Segmentation")
-                            midi_adjust_velocity_slider = gr.Slider(0, 1, value=config.midi_adjust_velocity, label="Adjust Velocity")
+                            with gr.Row():
+                                midi_hop_length_slider = gr.Slider(1, 512, step=1, value=config.midi_hop_length, label="Hop Length")
+                                midi_onset_delta_slider = gr.Slider(0, 1, step=0.01, value=config.midi_onset_delta, label="Onset Delta")
+                            with gr.Row():
+                                midi_disable_hh_frame_slider = gr.Slider(0, 10, step=1, value=config.midi_disable_hh_frame, label="Disable HH Frame")
+                                midi_adjust_offset_frame_slider = gr.Slider(0, 10, step=1, value=config.midi_adjust_offset_frame, label="Adjust Offset Frame")
+                            with gr.Row():
+                                midi_velocity_max_percentile_slider = gr.Slider(0, 100, step=1, value=config.midi_velocity_max_percentile, label="Velocity Max Percentile")
+                            with gr.Row():
+                                midi_test_offset_slider = gr.Slider(0, 512, step=1, value=config.midi_test_offset, label="Test Offset")
+                                midi_test_duration_slider = gr.Slider(0, 512, step=1, value=config.midi_test_duration, label="Test Duration")
                         with gr.TabItem("Pitch"):
                             with gr.Row():
                                 midi_bd_min_slider = gr.Slider(0, 127, step=1, value=config.bd_min, label="BD Min")
@@ -171,26 +203,33 @@ with gr.Blocks() as demo:
                             midi_reset_pitch_button = gr.Button("Reset").style(full_width=False, size='sm')
                 with gr.Column():
                     midi_output = gr.Textbox(show_label=False)
+                    midi_output_image = gr.Image(show_label=False)
 
             text = "分離したドラム音をMIDIに変換します。\n\n"
 
-            text += "\"Convert\"ボタンを押すと、音程を解析してDTX変換用のMIDIを出力します。\n"
-            text += "\"Convert Test\"ボタンを押すと、音程確認用の下記MIDIファイルを出力します。\n"
-            text += "- peak.mid: 音程のピーク値をMIDI化したファイル\n"
-            text += "- cqt.mid: 定Q変換してMIDI化したファイル\n\n"
+            text += "\"Convert\"ボタンを押すと、音高を解析してDTX変換用のMIDIを出力します。\n"
+            text += "\"Convert Test\"ボタンを押すと、音高確認用の画像ファイルを出力します。\n\n"
 
             text += "各パラメータの説明\n"
             text += "- Threshold: 変換しきい値。下げると小さい音も拾いやすくなりますが、ノイズも乗りやすくなります\n"
             text += "- Segmentation: ノーツの分裂しやすさ。上げると連打系が拾いやすくなりますが、ノイズも乗りやすくなります\n"
-            text += "- Adjust Velocity: Velocityを計算するときの補正値\n\n"
+            text += "- Hop Length: 解析時の移動幅(フレーム数)\n"
+            text += "- Onset Delta: Onset検出の感度。下げると小さい音も拾いやすくなりますが、ノイズも乗りやすくなります\n"
+            text += "- Disable HH Frame: 指定フレーム内にノーツがある場合、ハイハットを無効化します\n"
+            text += "- Adjust Offset Frame: Onsetに合わせて調整する最大フレーム数\n"
+            text += "- Velocity Max Percentile: Velocityの最大値に対応するnパーセンタイル\n"
+            text += "- Test Offset: 音高確認画像の開始位置(秒)\n"
+            text += "- Test Duration: 音高確認画像の再生時間(秒)\n\n"
 
-            text += "Pitchタブで各チャンネルの基準音程を変更できます。\n"
+            text += "Pitchタブで各チャンネルの基準音高を変更できます。\n"
             gr.TextArea(text, show_label=False)
         with gr.TabItem("5. Convert to DTX"):
             with gr.Row():
                 with gr.Column():
                     add_space(1)
-                    dtx_convert_button = gr.Button("Convert", variant="primary")
+                    with gr.Row():
+                        dtx_convert_button = gr.Button("Convert", variant="primary")
+                        dtx_convert_and_output_image_button = gr.Button("Convert And Output Image", variant="primary")
                     with gr.Tabs():
                         with gr.TabItem("Base"):
                             with gr.Row():
@@ -213,7 +252,6 @@ with gr.Blocks() as demo:
                             with gr.Row():
                                 dtx_wav_splits_slider = gr.Slider(1, 10, value=config.dtx_wav_splits, step=1, label="Wav Splits")
                                 dtx_wav_volume_slider = gr.Slider(0, 100, value=config.dtx_wav_volume, step=1, label="Wav Volume")
-                            dtx_output_image_checkbox = gr.Checkbox(value=config.dtx_show_image, label="Output Image")
                         with gr.TabItem("Header"):
                             dtx_title_textbox = gr.Textbox(label="Music Title", value=config.dtx_title)
                             dtx_artist_textbox = gr.Textbox(label="Artist", value=config.dtx_artist)
@@ -231,7 +269,7 @@ with gr.Blocks() as demo:
                             with gr.Row():
                                 dtx_bd_wav_textbox = gr.Textbox(label="BassDrum", value=config.bd_wav)
                                 dtx_bd_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.bd_volume)
-                                dtx_bd_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.bd_offset)
+                                dtx_bd_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.bd_offset2)
                             with gr.Row():
                                 dtx_ht_wav_textbox = gr.Textbox(label="HighTom", value=config.ht_wav)
                                 dtx_ht_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.ht_volume)
@@ -273,9 +311,13 @@ with gr.Blocks() as demo:
                             dtx_reset_wav_button2 = gr.Button("Reset").style(full_width=False, size='sm')
                 with gr.Column():
                     dtx_output = gr.Textbox(show_label=False)
+                    dtx_output_score = gr.Textbox(show_label=False)
                     dtx_output_image = gr.Image(show_label=False)
 
             text = "MIDIをDTXに変換します。\n\n"
+
+            text += "\"Convert\"ボタンを押すと、MIDIからDTX譜面を出力します。\n"
+            text += "\"Convert And Output Image\"ボタンを押すと、譜面を画像化したものも同時に出力します。(時間がかかります)\n\n"
 
             text += "- Chip Resolution: チップ配置の解像度\n"
             text += "- BGM Resolution: チップ配置の解像度\n"
@@ -283,13 +325,29 @@ with gr.Blocks() as demo:
             text += "- Auto Shift Time: Shift Timeを自動調整します\n"
             text += "- Align Nth BD: 指定番目のバスドラムのチップ位置を、小節開始位置に設定します\n"
             text += "- Auto Align Nth BD: Align Nth BDを自動調整します\n"
-            text += "- BGM Offset: BGMの開始位置を調整します\n"
-            text += "- BGM Volume: BGMの音量を調整します\n"
-            text += "- Show Image: DTX譜面を画像化して出力します。時間かかるので2回目以降は外すのを推奨\n\n"
+            text += "- BGM Offset: BGMの開始位置を調整します(秒)\n"
+            text += "- BGM Volume: BGMの音量\n"
+            text += "- Wav Splits: WAVの音量による分割数\n"
+            text += "- Wav Volume: WAVの最大音量\n\n"
 
             text += "Headerタブでヘッダー情報を編集できます\n"
             text += "Chipsタブでチップ音のファイル名、音量、開始時間を編集できます\n"
             gr.TextArea(text, show_label=False)
+
+    app_config_inputs = [
+        project_path_textbox,
+        workspace_path_textbox,
+        auto_save_checkbox,
+
+        batch_download_movie_checkbox,
+        batch_create_preview_checkbox,
+        batch_separate_music_checkbox,
+        batch_convert_to_midi_checkbox,
+        batch_convert_to_dtx_checkbox,
+
+        batch_skip_converted_checkbox,
+        batch_jobs_slider,
+    ]
 
     dtx_wav_inputs = [
         dtx_hhc_wav_textbox,
@@ -357,7 +415,13 @@ with gr.Blocks() as demo:
         midi_resolution_slider,
         midi_threshold_slider,
         midi_segmentation_slider,
-        midi_adjust_velocity_slider,
+        midi_hop_length_slider,
+        midi_onset_delta_slider,
+        midi_disable_hh_frame_slider,
+        midi_adjust_offset_frame_slider,
+        midi_velocity_max_percentile_slider,
+        midi_test_offset_slider,
+        midi_test_duration_slider,
 
         midi_bd_min_slider,
         midi_sn_min_slider,
@@ -385,7 +449,6 @@ with gr.Blocks() as demo:
         dtx_bgm_volume_slider,
         dtx_wav_splits_slider,
         dtx_wav_volume_slider,
-        dtx_output_image_checkbox,
 
         dtx_title_textbox,
         dtx_artist_textbox,
@@ -411,6 +474,7 @@ with gr.Blocks() as demo:
         midi_output,
 
         dtx_output,
+        dtx_output_score,
         dtx_output_image,
     ]
 
@@ -447,6 +511,22 @@ with gr.Blocks() as demo:
                                   inputs=[],
                                   outputs=workspace_gallery)
 
+    batch_convert_selected_score_button.click(batch_convert_selected_score_gr,
+                                            inputs=app_config_inputs,
+                                            outputs=[
+                                                    base_output,
+                                                    batch_output,
+                                                    *inputs,
+                                            ])
+
+    batch_convert_all_score_button.click(batch_convert_all_score_gr,
+                                            inputs=app_config_inputs,
+                                            outputs=[
+                                                    base_output,
+                                                    batch_output,
+                                                    *inputs,
+                                            ])
+
     movie_download_button.click(download_and_convert_video_gr,
                           inputs=inputs,
                           outputs=[
@@ -479,16 +559,6 @@ with gr.Blocks() as demo:
                                 movie_output_audio,
                           ])
 
-    preview_auto_create_button.click(auto_create_preview_gr,
-                      inputs=inputs,
-                      outputs=[
-                            base_output,
-                            preview_output,
-                            preview_input_audio,
-                            preview_output_audio,
-                            preview_start_time_slider,
-                      ])
-
     preview_create_button.click(create_preview_gr,
                       inputs=inputs,
                       outputs=[
@@ -496,6 +566,7 @@ with gr.Blocks() as demo:
                             preview_output,
                             preview_input_audio,
                             preview_output_audio,
+                            preview_start_time_slider,
                       ])
 
     preview_reload_button.click(reload_preview_gr,
@@ -521,6 +592,7 @@ with gr.Blocks() as demo:
                       outputs=[
                             base_output,
                             midi_output,
+                            midi_output_image,
                       ])
 
     midi_convert_test_button.click(convert_test_to_midi_gr,
@@ -528,6 +600,7 @@ with gr.Blocks() as demo:
                       outputs=[
                             base_output,
                             midi_output,
+                            midi_output_image,
                       ])
 
     midi_reset_pitch_button.click(reset_pitch_midi_gr,
@@ -535,6 +608,7 @@ with gr.Blocks() as demo:
                       outputs=[
                             base_output,
                             midi_output,
+                            midi_output_image,
 
                             midi_bd_min_slider,
                             midi_sn_min_slider,
@@ -556,6 +630,18 @@ with gr.Blocks() as demo:
                             dtx_output,
                             dtx_shift_time_slider,
                             dtx_align_nth_bd_slider,
+                            dtx_output_score,
+                            dtx_output_image,
+                      ])
+
+    dtx_convert_and_output_image_button.click(midi_to_dtx_and_output_image_gr,
+                      inputs=inputs,
+                      outputs=[
+                            base_output,
+                            dtx_output,
+                            dtx_shift_time_slider,
+                            dtx_align_nth_bd_slider,
+                            dtx_output_score,
                             dtx_output_image,
                       ])
 
