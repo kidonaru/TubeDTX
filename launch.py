@@ -92,11 +92,11 @@ with gr.Blocks(title="TubeDTX") as demo:
                         bgm_name_textbox = gr.Textbox(label="BGM File Name", value=config.bgm_name)
                         thumbnail_file_textbox = gr.Textbox(label="Thumbnail File Name", value=config.movie_thumbnail_file_name)
                     with gr.Row():
-                        movie_start_time_slider = gr.Slider(0, 600, value=config.movie_start_time, step=1, label="Trim Start Time")
-                        movie_end_time_slider = gr.Slider(0, 600, value=config.movie_end_time, step=1, label="Trim End Time")
+                        movie_start_time_slider = gr.Number(value=config.movie_start_time, label="Trim Start Time")
+                        movie_end_time_slider = gr.Number(value=config.movie_end_time, label="Trim End Time")
                     with gr.Row():
-                        movie_width_slider = gr.Slider(0, 2560, value=config.movie_width, step=1, label="Crop Width")
-                        movie_height_slider = gr.Slider(0, 1440, value=config.movie_height, step=1, label="Crop Height")
+                        movie_width_slider = gr.Number(value=config.movie_width, label="Crop Width")
+                        movie_height_slider = gr.Number(value=config.movie_height, label="Crop Height")
                 with gr.Column():
                     movie_output = gr.Textbox(show_label=False)
                     movie_input_video = gr.Video(label="Input", source="upload")
@@ -121,11 +121,12 @@ with gr.Blocks(title="TubeDTX") as demo:
                     with gr.Row():
                         preview_reload_button = gr.Button("Refresh")
                     preview_output_name_textbox = gr.Textbox(label="Preview File Name", value=config.preview_output_name)
-                    preview_start_time_slider = gr.Slider(0, 300, value=config.preview_start_time, label="Preview Start Time")
-                    preview_duration_slider = gr.Slider(0, 120, value=config.preview_duration, label="Preview Duration")
                     with gr.Row():
-                        preview_fade_in_duration_slider = gr.Slider(0, 10, value=config.preview_fade_in_duration, label="Fade In Duration")
-                        preview_fade_out_duration_slider = gr.Slider(0, 10, value=config.preview_fade_out_duration, label="Fade Out Duration")
+                        preview_start_time_slider = gr.Number(value=config.preview_start_time, label="Preview Start Time")
+                        preview_duration_slider = gr.Number(value=config.preview_duration, label="Preview Duration")
+                    with gr.Row():
+                        preview_fade_in_duration_slider = gr.Number(value=config.preview_fade_in_duration, label="Fade In Duration")
+                        preview_fade_out_duration_slider = gr.Number(value=config.preview_fade_out_duration, label="Fade Out Duration")
                 with gr.Column():
                     preview_output = gr.Textbox(show_label=False)
                     preview_input_audio = gr.Audio(label="Input", source="upload", type="filepath")
@@ -182,8 +183,8 @@ with gr.Blocks(title="TubeDTX") as demo:
                             with gr.Row():
                                 midi_velocity_max_percentile_slider = gr.Slider(0, 100, step=1, value=config.midi_velocity_max_percentile, label="Velocity Max Percentile")
                             with gr.Row():
-                                midi_test_offset_slider = gr.Slider(0, 512, step=1, value=config.midi_test_offset, label="Test Offset")
-                                midi_test_duration_slider = gr.Slider(0, 512, step=1, value=config.midi_test_duration, label="Test Duration")
+                                midi_test_offset_slider = gr.Number(value=config.midi_test_offset, label="Test Offset")
+                                midi_test_duration_slider = gr.Number(value=config.midi_test_duration, label="Test Duration")
                         with gr.TabItem("Pitch"):
                             with gr.Row():
                                 midi_bd_min_slider = gr.Slider(0, 127, step=1, value=config.bd_min, label="BD Min")
