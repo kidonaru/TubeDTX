@@ -98,7 +98,7 @@ TubeDTXは、YouTubeの動画からDTX譜面を作成するアプリケーショ
 
 "0. Workspace"タブから一つづつ工程を進めていくと譜面ができます。
 
-使い方の参考動画: https://www.youtube.com/watch?v=RFh0rrF1zO8
+使い方の参考動画: https://www.youtube.com/watch?v=f9Dzy4mn3mI
 
 
 1. 譜面のディレクトリを開く
