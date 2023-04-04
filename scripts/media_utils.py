@@ -6,6 +6,7 @@ import mock
 from moviepy.video.fx.crop import crop
 from moviepy.editor import AudioFileClip, AudioClip, VideoFileClip, VideoClip
 from moviepy.audio.fx.all import audio_fadein, audio_fadeout
+from pydub import AudioSegment
 
 from pytube.cipher import get_throttling_function_code
 import requests
@@ -82,11 +83,10 @@ def download_video(url, output_path, thumbnail_path):
 
 @debug_args
 def trim_and_crop_video(input_path, output_path, start_time, end_time, width, height):
-    # パラメータが全て0の場合はコピーのみ
+    # パラメータが全て0の場合は何もしない
     if start_time == 0.0 and end_time == 0.0 and width == 0 and height == 0:
-        shutil.copyfile(input_path, output_path)
-        print(f"Video copy is complete. {output_path}")
-        return
+        print(f"Skip trim_and_crop_video. {input_path}")
+        return input_path
 
     with VideoFileClip(input_path) as video:
         if start_time > 0.0 or end_time > 0.0:
@@ -107,13 +107,27 @@ def trim_and_crop_video(input_path, output_path, start_time, end_time, width, he
         video.close()
 
     print(f"Video clipping is complete. {output_path}")
+    return output_path
 
 @debug_args
-def extract_audio(input_path, output_path):
+def normalize_audio(audio_file, target_dBFS):
+    audio: AudioSegment = AudioSegment.from_file(audio_file)
+    source_dBFS = audio.dBFS
+    print(f"Normalize audio. {source_dBFS}dB -> {target_dBFS}dB")
+
+    change_in_dBFS = target_dBFS - source_dBFS
+    normalized_audio = audio.apply_gain(change_in_dBFS)
+    return normalized_audio
+
+@debug_args
+def extract_audio(input_path, output_path, target_dbfs):
     with VideoFileClip(input_path) as video:
         audio = video.audio
         audio.write_audiofile(output_path)
         audio.close()
+
+    if target_dbfs < 0.0:
+        audio = normalize_audio(output_path, target_dbfs)
 
     print(f"Audio extract is complete. {output_path}")
 

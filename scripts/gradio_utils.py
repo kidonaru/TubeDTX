@@ -216,34 +216,7 @@ def batch_convert_all_score_gr(*args):
     return [base_output_log, output_log, *config.to_dict().values()]
 
 @debug_args
-def _convert_video_gr(config: ProjectConfig, project_path):
-    input_file_name = config.movie_download_file_name
-    output_file_name = config.movie_output_file_name
-    bgm_file_name = config.bgm_name
-    start_time = config.movie_start_time
-    end_time = config.movie_end_time
-    width = config.movie_width
-    height = config.movie_height
-
-    input_path = os.path.join(project_path, input_file_name)
-    output_path = os.path.join(project_path, output_file_name)
-    bgm_path = os.path.join(project_path, bgm_file_name)
-
-    trim_and_crop_video(input_path, output_path, start_time, end_time, width, height)
-    extract_audio(output_path, bgm_path)
-
-    output_log = "動画の処理に成功しました。\n"
-    output_log += '"2. Create Preview File"タブに進んでください。\n\n'
-
-    base_output_log = auto_save(config, project_path)
-
-    return [base_output_log, output_log, input_path, output_path, bgm_path]
-
-@debug_args
-def download_and_convert_video_gr(*args, project_path=None):
-    project_path = project_path or app_config.project_path
-    config = ProjectConfig(*args)
-
+def _download_video_gr(config: ProjectConfig, project_path):
     url = config.movie_url
     output_file_name = config.movie_download_file_name
     thumbnail_file_name = config.movie_thumbnail_file_name
@@ -259,17 +232,65 @@ def download_and_convert_video_gr(*args, project_path=None):
     config.dtx_title = title
     config.movie_thumbnail_file_name = thumbnail_path
 
-    outputs = _convert_video_gr(config, project_path)
-
-    output_log = "動画のダウンロードと変換に成功しました。\n"
+    output_log = "動画のダウンロードに成功しました。\n"
     output_log += '"2. Create Preview File"タブに進んでください。\n\n'
 
     output_log += f"title: {title}\n"
     output_log += f"duration: {duration}\n"
     output_log += f"dimensions: {width} x {height}\n\n"
-    outputs[1] = output_log
 
-    return [*outputs, title, thumbnail_path]
+    base_output_log = auto_save(config, project_path)
+
+    return [base_output_log, output_log, output_path, None, None, title, thumbnail_path]
+
+@debug_args
+def _convert_video_gr(config: ProjectConfig, project_path):
+    input_file_name = config.movie_download_file_name
+    output_file_name = config.movie_output_file_name
+    bgm_file_name = config.bgm_name
+    start_time = config.movie_start_time
+    end_time = config.movie_end_time
+    width = config.movie_width
+    height = config.movie_height
+    target_dbfs = config.movie_target_dbfs
+
+    input_path = os.path.join(project_path, input_file_name)
+    output_path = os.path.join(project_path, output_file_name)
+    bgm_path = os.path.join(project_path, bgm_file_name)
+
+    output_path = trim_and_crop_video(input_path, output_path, start_time, end_time, width, height)
+    extract_audio(output_path, bgm_path, target_dbfs)
+
+    output_log = "動画の処理に成功しました。\n"
+    output_log += '"2. Create Preview File"タブに進んでください。\n\n'
+
+    base_output_log = auto_save(config, project_path)
+
+    return [base_output_log, output_log, input_path, output_path, bgm_path]
+
+@debug_args
+def download_and_convert_video_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
+    config = ProjectConfig(*args)
+
+    download_outputs = _download_video_gr(config, project_path)
+
+    outputs = _convert_video_gr(config, project_path)
+
+    outputs[1] = download_outputs[1] + outputs[1]
+    outputs.append(download_outputs[5])
+    outputs.append(download_outputs[6])
+
+    return outputs
+
+@debug_args
+def download_video_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
+    config = ProjectConfig(*args)
+
+    outputs = _download_video_gr(config, project_path)
+
+    return outputs
 
 @debug_args
 def convert_video_gr(*args, project_path=None):

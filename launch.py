@@ -1,7 +1,7 @@
 import gradio as gr
 
 from scripts.config_utils import ProjectConfig, app_config
-from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
+from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
 
@@ -79,9 +79,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                 with gr.Column():
                     add_space(1)
                     with gr.Row():
-                        movie_download_button = gr.Button("Download & Convert", variant="primary")
-                        movie_convert_button = gr.Button("Convert", variant="primary")
+                        movie_download_and_convert_button = gr.Button("Download & Convert", variant="primary")
                     with gr.Row():
+                        movie_download_button = gr.Button("Download")
+                        movie_convert_button = gr.Button("Convert")
                         movie_refresh_button = gr.Button("Refresh")
                     with gr.Row():
                         movie_url_textbox = gr.Textbox(label="YouTube URL", value=config.movie_url)
@@ -97,6 +98,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                     with gr.Row():
                         movie_width_slider = gr.Number(value=config.movie_width, label="Crop Width")
                         movie_height_slider = gr.Number(value=config.movie_height, label="Crop Height")
+                    movie_target_dbfs_slider = gr.Slider(value=config.movie_target_dbfs, label="Target dBFS", minimum=-30, maximum=0, step=1)
                 with gr.Column():
                     movie_output = gr.Textbox(show_label=False)
                     movie_input_video = gr.Video(label="Input", source="upload")
@@ -402,6 +404,7 @@ with gr.Blocks(title="TubeDTX") as demo:
         movie_end_time_slider,
         movie_width_slider,
         movie_height_slider,
+        movie_target_dbfs_slider,
 
         preview_output_name_textbox,
         preview_start_time_slider,
@@ -528,7 +531,19 @@ with gr.Blocks(title="TubeDTX") as demo:
                                                     *inputs,
                                             ])
 
-    movie_download_button.click(download_and_convert_video_gr,
+    movie_download_and_convert_button.click(download_and_convert_video_gr,
+                          inputs=inputs,
+                          outputs=[
+                                base_output,
+                                movie_output,
+                                movie_input_video,
+                                movie_output_video,
+                                movie_output_audio,
+                                dtx_title_textbox,
+                                project_image,
+                          ])
+
+    movie_download_button.click(download_video_gr,
                           inputs=inputs,
                           outputs=[
                                 base_output,

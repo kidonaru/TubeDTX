@@ -72,6 +72,7 @@ class ProjectConfig(JsonConfig):
     movie_end_time: float = 0.0
     movie_width: int = 0
     movie_height: int = 0
+    movie_target_dbfs: float = -12.0
 
     preview_output_name: str = "pre.ogg"
     preview_start_time: float = 0.0
@@ -174,7 +175,7 @@ class ProjectConfig(JsonConfig):
         return os.path.join("resources", cls.get_config_name())
 
     def get_dtx_info(self):
-        return DtxInfo(
+        dtx_info = DtxInfo(
             TITLE = self.dtx_title,
             ARTIST = self.dtx_artist,
             COMMENT = self.dtx_comment,
@@ -235,6 +236,11 @@ class ProjectConfig(JsonConfig):
             WAV_SPLITS = self.dtx_wav_splits,
             WAV_VOLUME = self.dtx_wav_volume,
         )
+
+        if not os.path.exists(dtx_info.VIDEO):
+            dtx_info.VIDEO = self.movie_download_file_name
+
+        return dtx_info
 
     def get_resources(self):
         return [
