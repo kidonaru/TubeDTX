@@ -133,47 +133,52 @@ def _batch_convert_gr(project_path):
         output_path = os.path.join(project_path, file_name)
         return app_config.batch_skip_converted and os.path.exists(output_path)
 
-    if app_config.batch_download_movie:
-        if not check_converted(config.movie_download_file_name):
-            outputs = download_video_gr(*config.to_dict().values(), project_path=project_path)
-            config = ProjectConfig.load(project_path)
-            base_output_log = outputs[0]
-            output_log += outputs[1]
+    try:
+        if app_config.batch_download_movie:
+            if not check_converted(config.movie_download_file_name):
+                outputs = download_video_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
-    if app_config.batch_convert_movie:
-        if not check_converted(config.bgm_name):
-            outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path)
-            config = ProjectConfig.load(project_path)
-            base_output_log = outputs[0]
-            output_log += outputs[1]
+        if app_config.batch_convert_movie:
+            if not check_converted(config.bgm_name):
+                outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
-    if app_config.batch_create_preview:
-        if not check_converted(config.preview_output_name):
-            outputs = create_preview_gr(*config.to_dict().values(), project_path=project_path)
-            config = ProjectConfig.load(project_path)
-            base_output_log = outputs[0]
-            output_log += outputs[1]
+        if app_config.batch_create_preview:
+            if not check_converted(config.preview_output_name):
+                outputs = create_preview_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
-    if app_config.batch_separate_music:
-        if not check_converted("drums.wav"):
-            outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path)
-            config = ProjectConfig.load(project_path)
-            base_output_log = outputs[0]
-            output_log += outputs[1]
+        if app_config.batch_separate_music:
+            if not check_converted("drums.wav"):
+                outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
-    if app_config.batch_convert_to_midi:
-        if not check_converted("drums.mid"):
-            outputs = convert_to_midi_gr(*config.to_dict().values(), project_path=project_path)
-            config = ProjectConfig.load(project_path)
-            base_output_log = outputs[0]
-            output_log += outputs[1]
+        if app_config.batch_convert_to_midi:
+            if not check_converted("drums.mid"):
+                outputs = convert_to_midi_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
-    if app_config.batch_convert_to_dtx:
-        if not check_converted(config.dtx_output_name):
-            outputs = midi_to_dtx_gr(*config.to_dict().values(), project_path=project_path)
-            config = ProjectConfig.load(project_path)
-            base_output_log = outputs[0]
-            output_log += outputs[1]
+        if app_config.batch_convert_to_dtx:
+            if not check_converted(config.dtx_output_name):
+                outputs = midi_to_dtx_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
+    except Exception as e:
+        print(e)
+        output_log += f"エラーが発生しました。\n"
+        output_log += str(e)
 
     # ログに譜面名を追加
     if len(output_log) > 0:
