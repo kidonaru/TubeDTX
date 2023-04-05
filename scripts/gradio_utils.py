@@ -1,10 +1,11 @@
 from dataclasses import asdict
 import datetime
-from multiprocessing import Pool
+import multiprocessing as mp
 import os
 import random
 import shutil
 import string
+import traceback
 import gradio as gr
 import requests
 
@@ -123,7 +124,7 @@ def reload_workspace_gr():
     return gallery
 
 @debug_args
-def _batch_convert_gr(project_path):
+def _batch_convert_gr(lock: mp.Lock, project_path):
     config = ProjectConfig.load(project_path)
 
     base_output_log = ""
@@ -143,10 +144,11 @@ def _batch_convert_gr(project_path):
 
         if app_config.batch_convert_movie:
             if not check_converted(config.bgm_name):
-                outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path)
-                config = ProjectConfig.load(project_path)
-                base_output_log = outputs[0]
-                output_log += outputs[1]
+                with lock:
+                    outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path)
+                    config = ProjectConfig.load(project_path)
+                    base_output_log = outputs[0]
+                    output_log += outputs[1]
 
         if app_config.batch_create_preview:
             if not check_converted(config.preview_output_name):
@@ -157,10 +159,11 @@ def _batch_convert_gr(project_path):
 
         if app_config.batch_separate_music:
             if not check_converted("drums.wav"):
-                outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path)
-                config = ProjectConfig.load(project_path)
-                base_output_log = outputs[0]
-                output_log += outputs[1]
+                with lock:
+                    outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path)
+                    config = ProjectConfig.load(project_path)
+                    base_output_log = outputs[0]
+                    output_log += outputs[1]
 
         if app_config.batch_convert_to_midi:
             if not check_converted("drums.mid"):
@@ -177,8 +180,9 @@ def _batch_convert_gr(project_path):
                 output_log += outputs[1]
     except Exception as e:
         print(e)
+        print(traceback.format_exc())
         output_log += f"エラーが発生しました。\n"
-        output_log += str(e)
+        output_log += f"{str(e)}\n{traceback.format_exc()}\n\n"
 
     # ログに譜面名を追加
     if len(output_log) > 0:
@@ -195,7 +199,8 @@ def batch_convert_selected_score_gr(*args):
     app_config = AppConfig(*args)
     app_config.save(".")
 
-    outputs = _batch_convert_gr(app_config.project_path)
+    lock = mp.Manager().Lock()
+    outputs = _batch_convert_gr(lock, app_config.project_path)
 
     outputs[1] += "全てのバッチ処理が完了しました。\n\n"
 
@@ -212,8 +217,9 @@ def batch_convert_all_score_gr(*args):
     base_output_log = ""
     output_log = ""
 
-    pool = Pool(app_config.batch_jobs)
-    result = pool.map(_batch_convert_gr, project_paths)
+    pool = mp.Pool(app_config.batch_jobs)
+    lock = mp.Manager().Lock()
+    result = pool.starmap(_batch_convert_gr, [(lock, p) for p in project_paths])
 
     index = project_paths.index(app_config.project_path)
     base_output_log = result[index][0]
