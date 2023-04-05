@@ -47,6 +47,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                         with gr.TabItem("Batch"):
                             batch_output = gr.Textbox(show_label=False)
                             batch_download_movie_checkbox = gr.Checkbox(value=app_config.batch_download_movie, label="1. Download Movie")
+                            batch_convert_movie_checkbox = gr.Checkbox(value=app_config.batch_convert_movie, label="1.5. Convert Movie")
                             batch_create_preview_checkbox = gr.Checkbox(value=app_config.batch_create_preview, label="2. Create Preview File")
                             batch_separate_music_checkbox = gr.Checkbox(value=app_config.batch_separate_music, label="3. Separate Music")
                             batch_convert_to_midi_checkbox = gr.Checkbox(value=app_config.batch_convert_to_midi, label="4. Convert to MIDI")
@@ -344,6 +345,7 @@ with gr.Blocks(title="TubeDTX") as demo:
         auto_save_checkbox,
 
         batch_download_movie_checkbox,
+        batch_convert_movie_checkbox,
         batch_create_preview_checkbox,
         batch_separate_music_checkbox,
         batch_convert_to_midi_checkbox,

@@ -265,6 +265,7 @@ class AppConfig(JsonConfig):
     auto_save: bool = True
 
     batch_download_movie: bool = True
+    batch_convert_movie: bool = True
     batch_create_preview: bool = True
     batch_separate_music: bool = True
     batch_convert_to_midi: bool = True

@@ -134,8 +134,15 @@ def _batch_convert_gr(project_path):
         return app_config.batch_skip_converted and os.path.exists(output_path)
 
     if app_config.batch_download_movie:
+        if not check_converted(config.movie_download_file_name):
+            outputs = download_video_gr(*config.to_dict().values(), project_path=project_path)
+            config = ProjectConfig.load(project_path)
+            base_output_log = outputs[0]
+            output_log += outputs[1]
+
+    if app_config.batch_convert_movie:
         if not check_converted(config.bgm_name):
-            outputs = download_and_convert_video_gr(*config.to_dict().values(), project_path=project_path)
+            outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path)
             config = ProjectConfig.load(project_path)
             base_output_log = outputs[0]
             output_log += outputs[1]
@@ -256,6 +263,9 @@ def _convert_video_gr(config: ProjectConfig, project_path):
     input_path = os.path.join(project_path, input_file_name)
     output_path = os.path.join(project_path, output_file_name)
     bgm_path = os.path.join(project_path, bgm_file_name)
+
+    if os.path.exists(output_path):
+        os.remove(output_path)
 
     output_path = trim_and_crop_video(input_path, output_path, start_time, end_time, width, height)
     extract_audio(output_path, bgm_path, target_dbfs)
