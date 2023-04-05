@@ -72,7 +72,7 @@ class ProjectConfig(JsonConfig):
     movie_end_time: float = 0.0
     movie_width: int = 0
     movie_height: int = 0
-    movie_target_dbfs: float = -12.0
+    movie_target_dbfs: float = 0.0
 
     preview_output_name: str = "pre.ogg"
     preview_start_time: float = 0.0

@@ -230,7 +230,6 @@ def _download_video_gr(config: ProjectConfig, project_path):
     title, duration, width, height = download_video(url, output_path, thumbnail_path)
 
     config.dtx_title = title
-    config.movie_thumbnail_file_name = thumbnail_path
 
     output_log = "動画のダウンロードに成功しました。\n"
     output_log += '"2. Create Preview File"タブに進んでください。\n\n'

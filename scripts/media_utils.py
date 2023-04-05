@@ -4,7 +4,7 @@ import shutil
 import time
 import mock
 from moviepy.video.fx.crop import crop
-from moviepy.editor import AudioFileClip, AudioClip, VideoFileClip, VideoClip
+from moviepy.editor import AudioFileClip, AudioClip, VideoFileClip
 from moviepy.audio.fx.all import audio_fadein, audio_fadeout
 from pydub import AudioSegment
 
@@ -117,7 +117,9 @@ def normalize_audio(audio_file, target_dBFS):
 
     change_in_dBFS = target_dBFS - source_dBFS
     normalized_audio = audio.apply_gain(change_in_dBFS)
-    return normalized_audio
+
+    format = os.path.splitext(audio_file)[1][1:]
+    normalized_audio.export(audio_file, format=format)
 
 @debug_args
 def extract_audio(input_path, output_path, target_dbfs):
@@ -127,7 +129,7 @@ def extract_audio(input_path, output_path, target_dbfs):
         audio.close()
 
     if target_dbfs < 0.0:
-        audio = normalize_audio(output_path, target_dbfs)
+        normalize_audio(output_path, target_dbfs)
 
     print(f"Audio extract is complete. {output_path}")
 
