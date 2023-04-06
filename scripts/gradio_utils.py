@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 from dataclasses import asdict
 import datetime
 import multiprocessing as mp
@@ -144,11 +145,10 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
 
         if app_config.batch_convert_movie:
             if not check_converted(config.bgm_name):
-                with lock:
-                    outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path)
-                    config = ProjectConfig.load(project_path)
-                    base_output_log = outputs[0]
-                    output_log += outputs[1]
+                outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path, lock=lock)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
         if app_config.batch_create_preview:
             if not check_converted(config.preview_output_name):
@@ -159,11 +159,10 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
 
         if app_config.batch_separate_music:
             if not check_converted("drums.wav"):
-                with lock:
-                    outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path)
-                    config = ProjectConfig.load(project_path)
-                    base_output_log = outputs[0]
-                    output_log += outputs[1]
+                outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
         if app_config.batch_convert_to_midi:
             if not check_converted("drums.mid"):
@@ -261,7 +260,7 @@ def _download_video_gr(config: ProjectConfig, project_path):
     return [base_output_log, output_log, output_path, None, None, title, thumbnail_path]
 
 @debug_args
-def _convert_video_gr(config: ProjectConfig, project_path):
+def _convert_video_gr(config: ProjectConfig, project_path, lock: mp.Lock):
     input_file_name = config.movie_download_file_name
     output_file_name = config.movie_output_file_name
     bgm_file_name = config.bgm_name
@@ -279,7 +278,8 @@ def _convert_video_gr(config: ProjectConfig, project_path):
         os.remove(output_path)
 
     output_path = trim_and_crop_video(input_path, output_path, start_time, end_time, width, height)
-    extract_audio(output_path, bgm_path, target_dbfs)
+    with lock if lock is not None else nullcontext():
+        extract_audio(output_path, bgm_path, target_dbfs)
 
     output_log = "動画の処理に成功しました。\n"
     output_log += '"2. Create Preview File"タブに進んでください。\n\n'
@@ -289,13 +289,13 @@ def _convert_video_gr(config: ProjectConfig, project_path):
     return [base_output_log, output_log, input_path, output_path, bgm_path]
 
 @debug_args
-def download_and_convert_video_gr(*args, project_path=None):
+def download_and_convert_video_gr(*args, project_path=None, lock: mp.Lock=None):
     project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     download_outputs = _download_video_gr(config, project_path)
 
-    outputs = _convert_video_gr(config, project_path)
+    outputs = _convert_video_gr(config, project_path, lock)
 
     outputs[1] = download_outputs[1] + outputs[1]
     outputs.append(download_outputs[5])
@@ -313,11 +313,11 @@ def download_video_gr(*args, project_path=None):
     return outputs
 
 @debug_args
-def convert_video_gr(*args, project_path=None):
+def convert_video_gr(*args, project_path=None, lock: mp.Lock=None):
     project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
-    outputs = _convert_video_gr(config, project_path)
+    outputs = _convert_video_gr(config, project_path, lock)
 
     return outputs
 
@@ -407,7 +407,7 @@ def randomname(n):
    return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
 
 @debug_args
-def separate_music_gr(*args, project_path=None):
+def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
     project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
@@ -427,7 +427,8 @@ def separate_music_gr(*args, project_path=None):
     tmp_input_path = os.path.join(tmp_dir, randomname(10) + os.path.splitext(bgm_name)[1])
     force_copy_file(input_path, tmp_input_path)
 
-    separate_music(model, tmp_dir, tmp_input_path, jobs)
+    with lock if lock is not None else nullcontext():
+        separate_music(model, tmp_dir, tmp_input_path, jobs)
 
     # 一時出力先パス
     basename_without_ext = os.path.splitext(os.path.basename(tmp_input_path))[0]
