@@ -626,6 +626,9 @@ def _midi_to_dtx_gr(config: ProjectConfig, project_path: str, output_image: bool
     output_image_path = os.path.join(project_path, output_image_name) if output_image else None
     dtx_info = config.get_dtx_info()
 
+    if not os.path.exists(os.path.join(project_path, dtx_info.VIDEO)):
+        dtx_info.VIDEO = config.movie_download_file_name
+
     dtx_text = midi_to_dtx(input_path, output_path, output_image_path, dtx_info)
 
     config.dtx_shift_time = dtx_info.SHIFT_TIME

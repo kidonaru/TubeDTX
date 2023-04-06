@@ -237,9 +237,6 @@ class ProjectConfig(JsonConfig):
             WAV_VOLUME = self.dtx_wav_volume,
         )
 
-        if not os.path.exists(dtx_info.VIDEO):
-            dtx_info.VIDEO = self.movie_download_file_name
-
         return dtx_info
 
     def get_resources(self):
