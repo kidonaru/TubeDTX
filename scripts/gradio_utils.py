@@ -3,16 +3,14 @@ from dataclasses import asdict
 import datetime
 import multiprocessing as mp
 import os
-import random
 import shutil
-import string
 import traceback
 import gradio as gr
 import requests
 
 from scripts.config_utils import AppConfig, ProjectConfig, app_config
 from scripts.debug_utils import debug_args
-from scripts.media_utils import create_preview_audio, download_video, extract_audio, get_video_info, trim_and_crop_video
+from scripts.media_utils import create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
 from scripts.convert_to_midi import convert_to_midi_cqt, convert_to_midi_drums, convert_to_midi_peak, output_test_image
 from scripts.midi_to_dtx import midi_to_dtx
@@ -145,7 +143,7 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
 
         if app_config.batch_convert_movie:
             if not check_converted(config.bgm_name):
-                outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path, lock=lock)
+                outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path)
                 config = ProjectConfig.load(project_path)
                 base_output_log = outputs[0]
                 output_log += outputs[1]
@@ -260,7 +258,7 @@ def _download_video_gr(config: ProjectConfig, project_path):
     return [base_output_log, output_log, output_path, None, None, title, thumbnail_path]
 
 @debug_args
-def _convert_video_gr(config: ProjectConfig, project_path, lock: mp.Lock):
+def _convert_video_gr(config: ProjectConfig, project_path):
     input_file_name = config.movie_download_file_name
     output_file_name = config.movie_output_file_name
     bgm_file_name = config.bgm_name
@@ -278,8 +276,7 @@ def _convert_video_gr(config: ProjectConfig, project_path, lock: mp.Lock):
         os.remove(output_path)
 
     output_path = trim_and_crop_video(input_path, output_path, start_time, end_time, width, height)
-    with lock if lock is not None else nullcontext():
-        extract_audio(output_path, bgm_path, target_dbfs)
+    extract_audio(output_path, bgm_path, target_dbfs)
 
     output_log = "動画の処理に成功しました。\n"
     output_log += '"2. Create Preview File"タブに進んでください。\n\n'
@@ -289,13 +286,13 @@ def _convert_video_gr(config: ProjectConfig, project_path, lock: mp.Lock):
     return [base_output_log, output_log, input_path, output_path, bgm_path]
 
 @debug_args
-def download_and_convert_video_gr(*args, project_path=None, lock: mp.Lock=None):
+def download_and_convert_video_gr(*args, project_path=None):
     project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     download_outputs = _download_video_gr(config, project_path)
 
-    outputs = _convert_video_gr(config, project_path, lock)
+    outputs = _convert_video_gr(config, project_path)
 
     outputs[1] = download_outputs[1] + outputs[1]
     outputs.append(download_outputs[5])
@@ -313,11 +310,11 @@ def download_video_gr(*args, project_path=None):
     return outputs
 
 @debug_args
-def convert_video_gr(*args, project_path=None, lock: mp.Lock=None):
+def convert_video_gr(*args, project_path=None):
     project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
-    outputs = _convert_video_gr(config, project_path, lock)
+    outputs = _convert_video_gr(config, project_path)
 
     return outputs
 
@@ -403,9 +400,6 @@ def force_copy_file(input_path, output_path):
         os.remove(output_path)
     shutil.copyfile(input_path, output_path)
 
-def randomname(n):
-   return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
-
 @debug_args
 def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
     project_path = project_path or app_config.project_path
@@ -419,12 +413,10 @@ def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
     if not os.path.exists(input_path):
         return [f"BGMが見つかりません。 {input_path}", None]
 
-    tmp_dir = os.path.join(".", "tmp")
-    if not os.path.isdir(tmp_dir):
-        os.mkdir(tmp_dir)
+    tmp_dir = get_tmp_dir()
 
     # 全角文字が入ってるとコンバートに失敗するので作業ディレクトリに移動する
-    tmp_input_path = os.path.join(tmp_dir, randomname(10) + os.path.splitext(bgm_name)[1])
+    tmp_input_path = get_tmp_file_path(os.path.splitext(bgm_name)[1])
     force_copy_file(input_path, tmp_input_path)
 
     with lock if lock is not None else nullcontext():
@@ -440,7 +432,7 @@ def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
 
     # 一時ファイルの削除
     os.remove(tmp_input_path)
-    shutil.rmtree(os.path.join(tmp_dir, model))
+    shutil.rmtree(os.path.join(tmp_dir, model, basename_without_ext))
 
     bpm = compute_bpm(output_path)
     config.dtx_bpm = bpm

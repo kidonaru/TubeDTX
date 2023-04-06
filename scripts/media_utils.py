@@ -1,6 +1,8 @@
 import os
+import random
 import re
 import shutil
+import string
 import time
 import mock
 from moviepy.video.fx.crop import crop
@@ -36,6 +38,25 @@ def patched_throttling_plan(js: str):
             transform_steps.append((match[0],match[1]))
 
     return transform_steps
+
+def randomname(n):
+   return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
+
+@debug_args
+def get_tmp_dir():
+    tmp_dir = os.path.join(".", "tmp")
+    if not os.path.isdir(tmp_dir):
+        os.mkdir(tmp_dir)
+    return tmp_dir
+
+@debug_args
+def get_tmp_file_path(ext):
+    tmp_dir = os.path.join(".", "tmp")
+    if not os.path.isdir(tmp_dir):
+        os.mkdir(tmp_dir)
+
+    tmp_file_path = os.path.join(tmp_dir, randomname(10) + ext)
+    return tmp_file_path
 
 @debug_args
 def get_video_info(url):
@@ -103,7 +124,8 @@ def trim_and_crop_video(input_path, output_path, start_time, end_time, width, he
                 y_center=video.h/2,
                 width=width,
                 height=height)
-        video.write_videofile(output_path)
+        tmp_file = get_tmp_file_path(".m4a")
+        video.write_videofile(output_path, temp_audiofile=tmp_file, codec="libx264", audio_codec="aac")
         video.close()
 
     print(f"Video clipping is complete. {output_path}")
