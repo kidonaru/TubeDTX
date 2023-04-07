@@ -267,52 +267,64 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 dtx_hhc_wav_textbox = gr.Textbox(label="HiHatClose", value=config.hhc_wav)
                                 dtx_hhc_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.hhc_volume)
                                 dtx_hhc_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.hhc_offset)
+                                dtx_hhc_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.hhc_pan)
                             with gr.Row():
                                 dtx_snare_wav_textbox = gr.Textbox(label="Snare", value=config.snare_wav)
                                 dtx_snare_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.snare_volume)
                                 dtx_snare_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.snare_offset)
+                                dtx_snare_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.snare_pan)
                             with gr.Row():
                                 dtx_bd_wav_textbox = gr.Textbox(label="BassDrum", value=config.bd_wav)
                                 dtx_bd_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.bd_volume)
                                 dtx_bd_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.bd_offset2)
+                                dtx_bd_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.bd_pan)
                             with gr.Row():
                                 dtx_ht_wav_textbox = gr.Textbox(label="HighTom", value=config.ht_wav)
                                 dtx_ht_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.ht_volume)
                                 dtx_ht_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.ht_offset)
+                                dtx_ht_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.ht_pan)
                             with gr.Row():
                                 dtx_lt_wav_textbox = gr.Textbox(label="LowTom", value=config.lt_wav)
                                 dtx_lt_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.lt_volume)
                                 dtx_lt_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.lt_offset)
+                                dtx_lt_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.lt_pan)
                             with gr.Row():
                                 dtx_cymbal_wav_textbox = gr.Textbox(label="Cymbal", value=config.cymbal_wav)
                                 dtx_cymbal_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.cymbal_volume)
                                 dtx_cymbal_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.cymbal_offset)
+                                dtx_cymbal_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.cymbal_pan)
                             dtx_reset_wav_button1 = gr.Button("Reset").style(full_width=False, size='sm')
                         with gr.TabItem("Chips 2"):
                             with gr.Row():
                                 dtx_ft_wav_textbox = gr.Textbox(label="FloorTom", value=config.ft_wav)
                                 dtx_ft_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.ft_volume)
                                 dtx_ft_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.ft_offset)
+                                dtx_ft_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.ft_pan)
                             with gr.Row():
                                 dtx_hho_wav_textbox = gr.Textbox(label="HiHatOpen", value=config.hho_wav)
                                 dtx_hho_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.hho_volume)
                                 dtx_hho_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.hho_offset)
+                                dtx_hho_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.hho_pan)
                             with gr.Row():
                                 dtx_ride_wav_textbox = gr.Textbox(label="RideCymbal", value=config.ride_wav)
                                 dtx_ride_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.ride_volume)
                                 dtx_ride_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.ride_offset)
+                                dtx_ride_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.ride_pan)
                             with gr.Row():
                                 dtx_lc_wav_textbox = gr.Textbox(label="LeftCymbal", value=config.lc_wav)
                                 dtx_lc_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.lc_volume)
                                 dtx_lc_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.lc_offset)
+                                dtx_lc_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.lc_pan)
                             with gr.Row():
                                 dtx_lp_wav_textbox = gr.Textbox(label="LeftPedal", value=config.lp_wav)
                                 dtx_lp_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.lp_volume)
                                 dtx_lp_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.lp_offset)
+                                dtx_lp_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.lp_pan)
                             with gr.Row():
                                 dtx_lbd_wav_textbox = gr.Textbox(label="LeftBassDrum", value=config.lbd_wav)
                                 dtx_lbd_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.lbd_volume)
                                 dtx_lbd_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.lbd_offset)
+                                dtx_lbd_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.lbd_pan)
                             dtx_reset_wav_button2 = gr.Button("Reset").style(full_width=False, size='sm')
                 with gr.Column():
                     dtx_output = gr.Textbox(show_label=False)
@@ -394,6 +406,19 @@ with gr.Blocks(title="TubeDTX") as demo:
         dtx_lc_offset_slider,
         dtx_lp_offset_slider,
         dtx_lbd_offset_slider,
+
+        dtx_hhc_pan_slider,
+        dtx_snare_pan_slider,
+        dtx_bd_pan_slider,
+        dtx_ht_pan_slider,
+        dtx_lt_pan_slider,
+        dtx_cymbal_pan_slider,
+        dtx_ft_pan_slider,
+        dtx_hho_pan_slider,
+        dtx_ride_pan_slider,
+        dtx_lc_pan_slider,
+        dtx_lp_pan_slider,
+        dtx_lbd_pan_slider,
     ]
 
     inputs = [
@@ -543,6 +568,8 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 movie_output_video,
                                 movie_output_audio,
                                 dtx_title_textbox,
+                                dtx_artist_textbox,
+                                dtx_comment_textbox,
                                 project_image,
                           ])
 
@@ -555,6 +582,8 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 movie_output_video,
                                 movie_output_audio,
                                 dtx_title_textbox,
+                                dtx_artist_textbox,
+                                dtx_comment_textbox,
                                 project_image,
                           ])
 

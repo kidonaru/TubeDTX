@@ -9,6 +9,7 @@ from moviepy.video.fx.crop import crop
 from moviepy.editor import AudioFileClip, AudioClip, VideoFileClip
 from moviepy.audio.fx.all import audio_fadein, audio_fadeout
 from pydub import AudioSegment
+from typing import Tuple
 
 from pytube.cipher import get_throttling_function_code
 import requests
@@ -76,13 +77,18 @@ def download_video(url, output_path, thumbnail_path):
     output_dir, filename = os.path.split(output_path)
 
     title = ""
+    artist = ""
+    full_title = ""
     duration = 0
     thumbnail_url = ""
     with mock.patch('pytube.cipher.get_throttling_plan', patched_throttling_plan):
         from pytube import YouTube
         yt = YouTube(url)
         video = yt.streams.get_highest_resolution()
-        title = yt.title
+        full_title = yt.title
+        title, artist = extract_title_and_artist(full_title)
+        if artist == "":
+            artist = yt.author
         thumbnail_url = yt.thumbnail_url
         video.download(output_path=output_dir, filename=filename)
 
@@ -100,7 +106,7 @@ def download_video(url, output_path, thumbnail_path):
 
     print(f"Thumbnail download is complete. {thumbnail_path}")
 
-    return title, duration, video_size[0], video_size[1]
+    return full_title, title, artist, duration, video_size[0], video_size[1]
 
 @debug_args
 def trim_and_crop_video(input_path, output_path, start_time, end_time, width, height):
@@ -177,3 +183,27 @@ def create_preview_audio(
         trimmed_audio.close()
 
     print(f"Preview creation is complete. {output_path}")
+
+@debug_args
+def extract_title_and_artist(youtube_title: str) -> Tuple[str, str]:
+    title_patterns = [
+        re.compile(r'(?P<title>[^/]+)/(?P<artist>.+)'),
+        re.compile(r'(?P<title>.+) - (?P<artist>.+)'),
+        re.compile(r'(?P<title>.+)／(?P<artist>.+)'),
+        re.compile(r'「(?P<title>[^」]+)」を歌ってみた(?P<artist>.+)'),
+    ]
+
+    youtube_title = re.sub(r'【[^【】]+】', '', youtube_title)
+
+    for pattern in title_patterns:
+        match = pattern.search(youtube_title)
+        if match:
+            title = match.group("title").strip()
+            artist = match.group("artist").strip() if "artist" in pattern.groupindex else ""
+
+            if "feat." in title and artist != "":
+                title, artist = artist, title
+
+            return title, artist
+
+    return youtube_title, ""

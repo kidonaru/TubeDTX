@@ -242,20 +242,23 @@ def _download_video_gr(config: ProjectConfig, project_path):
     output_path = os.path.join(project_path, output_file_name)
     thumbnail_path = os.path.join(project_path, thumbnail_file_name)
 
-    title, duration, width, height = download_video(url, output_path, thumbnail_path)
+    comment, title, artist, duration, width, height = download_video(url, output_path, thumbnail_path)
 
     config.dtx_title = title
+    config.dtx_artist = artist
+    config.dtx_comment = comment
 
     output_log = "動画のダウンロードに成功しました。\n"
     output_log += '"2. Create Preview File"タブに進んでください。\n\n'
 
     output_log += f"title: {title}\n"
+    output_log += f"artist: {artist}\n"
     output_log += f"duration: {duration}\n"
     output_log += f"dimensions: {width} x {height}\n\n"
 
     base_output_log = auto_save(config, project_path)
 
-    return [base_output_log, output_log, output_path, None, None, title, thumbnail_path]
+    return [base_output_log, output_log, output_path, None, None, title, artist, comment, thumbnail_path]
 
 @debug_args
 def _convert_video_gr(config: ProjectConfig, project_path):
@@ -297,6 +300,8 @@ def download_and_convert_video_gr(*args, project_path=None):
     outputs[1] = download_outputs[1] + outputs[1]
     outputs.append(download_outputs[5])
     outputs.append(download_outputs[6])
+    outputs.append(download_outputs[7])
+    outputs.append(download_outputs[8])
 
     return outputs
 

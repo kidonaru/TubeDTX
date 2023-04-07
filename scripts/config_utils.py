@@ -166,6 +166,19 @@ class ProjectConfig(JsonConfig):
     lp_offset: float = 0.0
     lbd_offset: float = 0.0
 
+    hhc_pan: int = 0
+    snare_pan: int = 0
+    bd_pan: int = 0
+    ht_pan: int = 0
+    lt_pan: int = 0
+    cymbal_pan: int = 0
+    ft_pan: int = 0
+    hho_pan: int = 0
+    ride_pan: int = 0
+    lc_pan: int = 0
+    lp_pan: int = 0
+    lbd_pan: int = 0
+
     @classmethod
     def get_config_name(cls):
         return "tube_dtx_config.json"
@@ -224,6 +237,19 @@ class ProjectConfig(JsonConfig):
             LC_OFFSET = self.lc_offset,
             LP_OFFSET = self.lp_offset,
             LBD_OFFSET = self.lbd_offset,
+
+            HHC_PAN = self.hhc_pan,
+            SNARE_PAN = self.snare_pan,
+            BD_PAN = self.bd_pan,
+            HT_PAN = self.ht_pan,
+            LT_PAN = self.lt_pan,
+            CYMBAL_PAN = self.cymbal_pan,
+            FT_PAN = self.ft_pan,
+            HHO_PAN = self.hho_pan,
+            RIDE_PAN = self.ride_pan,
+            LC_PAN = self.lc_pan,
+            LP_PAN = self.lp_pan,
+            LBD_PAN = self.lbd_pan,
 
             CHIP_RESOLUTION = self.dtx_chip_resolution,
             BGM_RESOLUTION = self.dtx_bgm_resolution,
