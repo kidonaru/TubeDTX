@@ -54,7 +54,8 @@ def convert_to_midi_drums(
         hop_length,
         onset_delta,
         disable_hh_frame,
-        adjust_offset_frame,
+        adjust_offset_min,
+        adjust_offset_max,
         velocity_max_percentile,
         config: ProjectConfig):
     # 音声ファイルの読み込みと解析
@@ -80,7 +81,7 @@ def convert_to_midi_drums(
         return onset
 
     def get_offset_frame(t):
-        onset = get_onset_nearest(t, -adjust_offset_frame, adjust_offset_frame)
+        onset = get_onset_nearest(t, adjust_offset_min, adjust_offset_max)
         if onset is not None:
             return onset - t
         return None

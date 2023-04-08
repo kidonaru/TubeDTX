@@ -184,7 +184,9 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 midi_onset_delta_slider = gr.Slider(0, 1, step=0.01, value=config.midi_onset_delta, label="Onset Delta")
                             with gr.Row():
                                 midi_disable_hh_frame_slider = gr.Slider(0, 10, step=1, value=config.midi_disable_hh_frame, label="Disable HH Frame")
-                                midi_adjust_offset_frame_slider = gr.Slider(0, 20, step=1, value=config.midi_adjust_offset_frame, label="Adjust Offset Frame")
+                            with gr.Row():
+                                midi_adjust_offset_min_slider = gr.Slider(-20, 0, step=1, value=config.midi_adjust_offset_min, label="Adjust Offset Min")
+                                midi_adjust_offset_max_slider = gr.Slider(0, 20, step=1, value=config.midi_adjust_offset_max, label="Adjust Offset Max")
                             with gr.Row():
                                 midi_velocity_max_percentile_slider = gr.Slider(0, 100, step=1, value=config.midi_velocity_max_percentile, label="Velocity Max Percentile")
                             with gr.Row():
@@ -222,7 +224,7 @@ with gr.Blocks(title="TubeDTX") as demo:
             text += "- Hop Length: 解析時の移動幅(フレーム数)\n"
             text += "- Onset Delta: Onset検出の感度。下げると小さい音も拾いやすくなりますが、ノイズも乗りやすくなります\n"
             text += "- Disable HH Frame: 指定フレーム内にノーツがある場合、ハイハットを無効化します\n"
-            text += "- Adjust Offset Frame: Onsetに合わせて調整する最大フレーム数\n"
+            text += "- Adjust Offset Min/Max: Onsetに合わせて調整するフレーム範囲\n"
             text += "- Velocity Max Percentile: Velocityの最大値に対応するnパーセンタイル\n"
             text += "- Test Offset: 音高確認画像の開始位置(秒)\n"
             text += "- Test Duration: 音高確認画像の再生時間(秒)\n\n"
@@ -452,7 +454,8 @@ with gr.Blocks(title="TubeDTX") as demo:
         midi_hop_length_slider,
         midi_onset_delta_slider,
         midi_disable_hh_frame_slider,
-        midi_adjust_offset_frame_slider,
+        midi_adjust_offset_min_slider,
+        midi_adjust_offset_max_slider,
         midi_velocity_max_percentile_slider,
         midi_test_offset_slider,
         midi_test_duration_slider,

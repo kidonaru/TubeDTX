@@ -463,7 +463,8 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
     hop_length = config.midi_hop_length
     onset_delta = config.midi_onset_delta
     disable_hh_frame = config.midi_disable_hh_frame
-    adjust_offset_frame = config.midi_adjust_offset_frame
+    adjust_offset_min = config.midi_adjust_offset_min
+    adjust_offset_max = config.midi_adjust_offset_max
     velocity_max_percentile = config.midi_velocity_max_percentile
     bpm = config.dtx_bpm
 
@@ -487,7 +488,8 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
             hop_length,
             onset_delta,
             disable_hh_frame,
-            adjust_offset_frame,
+            adjust_offset_min,
+            adjust_offset_max,
             velocity_max_percentile,
             config)
 
@@ -514,7 +516,8 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
             hop_length,
             onset_delta,
             disable_hh_frame,
-            adjust_offset_frame,
+            adjust_offset_min,
+            adjust_offset_max,
             velocity_max_percentile,
             config)
 

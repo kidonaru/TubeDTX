@@ -90,7 +90,8 @@ class ProjectConfig(JsonConfig):
     midi_hop_length: int = 256
     midi_onset_delta: float = 0.03
     midi_disable_hh_frame: int = 1
-    midi_adjust_offset_frame: int = 5
+    midi_adjust_offset_min: int = -5
+    midi_adjust_offset_max: int = 5
     midi_velocity_max_percentile: int = 90
     midi_test_offset: float = 30.0
     midi_test_duration: float = 10.0
