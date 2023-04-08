@@ -10,7 +10,7 @@ import requests
 
 from scripts.config_utils import AppConfig, ProjectConfig, app_config
 from scripts.debug_utils import debug_args
-from scripts.media_utils import create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, trim_and_crop_video
+from scripts.media_utils import convert_audio, create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
 from scripts.convert_to_midi import convert_to_midi_cqt, convert_to_midi_drums, convert_to_midi_peak, output_test_image
 from scripts.midi_to_dtx import midi_to_dtx
@@ -400,10 +400,13 @@ def reload_preview_gr(*args, project_path=None):
 
     return [base_output_log, output_log, input_path, output_path]
 
+def safe_remove_file(file_path):
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
 @debug_args
 def force_copy_file(input_path, output_path):
-    if os.path.exists(output_path):
-        os.remove(output_path)
+    safe_remove_file(output_path)
     shutil.copyfile(input_path, output_path)
 
 @debug_args
@@ -412,33 +415,36 @@ def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
     config = ProjectConfig(*args)
 
     model = config.separate_model
-    bgm_name = config.bgm_name
+    input_file = config.bgm_name
+    output_file = config.midi_input_name2
     jobs = config.separate_jobs
+    bitrate = app_config.bgm_bitrate
 
-    input_path = os.path.join(project_path, bgm_name)
+    input_path = os.path.join(project_path, input_file)
+    output_path = os.path.join(project_path, output_file)
+
     if not os.path.exists(input_path):
-        return [f"BGMが見つかりません。 {input_path}", None]
-
-    tmp_dir = get_tmp_dir()
+        raise Exception(f"BGMが見つかりません。 {input_path}")
 
     # 全角文字が入ってるとコンバートに失敗するので作業ディレクトリに移動する
-    tmp_input_path = get_tmp_file_path(os.path.splitext(bgm_name)[1])
+    tmp_dir = get_tmp_dir()
+    tmp_input_path = get_tmp_file_path(os.path.splitext(input_path)[1])
     force_copy_file(input_path, tmp_input_path)
-
-    with lock if lock is not None else nullcontext():
-        separate_music(model, tmp_dir, tmp_input_path, jobs)
 
     # 一時出力先パス
     basename_without_ext = os.path.splitext(os.path.basename(tmp_input_path))[0]
     tmp_output_path = os.path.join(tmp_dir, model, basename_without_ext, "drums.wav")
 
-    # ファイルのコピー
-    output_path = os.path.join(project_path, "drums.wav")
-    force_copy_file(tmp_output_path, output_path)
+    with lock if lock is not None else nullcontext():
+        separate_music(model, tmp_dir, tmp_input_path, jobs)
+
+    # 音声の変換
+    convert_audio(tmp_output_path, output_path, bitrate)
 
     # 一時ファイルの削除
-    os.remove(tmp_input_path)
+    safe_remove_file(tmp_input_path)
     shutil.rmtree(os.path.join(tmp_dir, model, basename_without_ext))
+    safe_remove_file(os.path.join(project_path, "drums.wav"))
 
     bpm = compute_bpm(output_path)
     config.dtx_bpm = bpm
@@ -456,7 +462,7 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
     project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
-    input_file_name = config.midi_input_name
+    input_file_name = config.midi_input_name2
     resolution = config.midi_resolution
     threshold = config.midi_threshold
     segmentation = config.midi_segmentation

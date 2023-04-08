@@ -174,7 +174,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                         midi_convert_test_button = gr.Button("Convert Test")
                     with gr.Tabs():
                         with gr.TabItem("Base"):
-                            midi_input_name_textbox = gr.Textbox(label="Input File Name", value=config.midi_input_name)
+                            midi_input_name_textbox = gr.Textbox(label="Input File Name", value=config.midi_input_name2)
                             midi_resolution_slider = gr.Slider(0, 16, step=1, value=config.midi_resolution, label="Resolution")
                             with gr.Row():
                                 midi_threshold_slider = gr.Slider(0, 1, value=config.midi_threshold, label="Threshold")

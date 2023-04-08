@@ -187,6 +187,25 @@ def extract_audio(input_path, output_path, target_dbfs, bitrate):
     print(f"Audio extract is complete. {output_path}")
 
 @debug_args
+def convert_audio(input_file, output_file, bitrate):
+    tmp_input_file = get_tmp_file_path(os.path.splitext(input_file)[1])
+    tmp_output_file = get_tmp_file_path(os.path.splitext(output_file)[1])
+
+    shutil.move(input_file, tmp_input_file)
+
+    ffmpeg = get_setting("FFMPEG_BINARY")
+    cmd = [ffmpeg, '-y', '-i', tmp_input_file, '-ab', bitrate, tmp_output_file]
+    print(" ".join(cmd))
+
+    subprocess.run(cmd)
+
+    os.remove(tmp_input_file)
+
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    os.rename(tmp_output_file, output_file)
+
+@debug_args
 def create_preview_audio(
         input_path,
         output_path,
