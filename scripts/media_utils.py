@@ -3,13 +3,16 @@ import random
 import re
 import shutil
 import string
+import subprocess
 import time
 import mock
 from moviepy.video.fx.crop import crop
 from moviepy.editor import AudioFileClip, AudioClip, VideoFileClip
 from moviepy.audio.fx.all import audio_fadein, audio_fadeout
+from moviepy.config import get_setting
 from pydub import AudioSegment
 from typing import Tuple
+from ffmpy import FFmpeg
 
 from pytube.cipher import get_throttling_function_code
 import requests
@@ -138,16 +141,40 @@ def trim_and_crop_video(input_path, output_path, start_time, end_time, width, he
     return output_path
 
 @debug_args
+def get_audio_volume(audio_file):
+    ffmpeg = get_setting("FFMPEG_BINARY")
+    null_device = '/dev/null' if os.name == 'posix' else 'NUL'
+    cmd = [ffmpeg, '-i', audio_file, '-af', 'volumedetect', '-f', 'null', null_device]
+    print(" ".join(cmd))
+
+    process = subprocess.Popen(cmd, stderr=subprocess.PIPE, text=True)
+    _, stderr = process.communicate()
+    print(stderr)
+
+    source_dBFS = float(stderr.split("mean_volume: ")[1].split(" dB")[0])
+    return source_dBFS
+
+@debug_args
 def normalize_audio(audio_file, target_dBFS):
-    audio: AudioSegment = AudioSegment.from_file(audio_file)
-    source_dBFS = audio.dBFS
+    ext = os.path.splitext(audio_file)[1]
+    tmp_input_file = get_tmp_file_path(ext)
+    tmp_output_file = get_tmp_file_path(ext)
+
+    shutil.move(audio_file, tmp_input_file)
+
+    source_dBFS = get_audio_volume(tmp_input_file)
     print(f"Normalize audio. {source_dBFS}dB -> {target_dBFS}dB")
 
     change_in_dBFS = target_dBFS - source_dBFS
-    normalized_audio = audio.apply_gain(change_in_dBFS)
 
-    format = os.path.splitext(audio_file)[1][1:]
-    normalized_audio.export(audio_file, format=format)
+    ffmpeg = get_setting("FFMPEG_BINARY")
+    cmd = [ffmpeg, '-y', '-i', tmp_input_file, '-af', f'volume={change_in_dBFS}dB', tmp_output_file]
+    print(" ".join(cmd))
+
+    subprocess.run(cmd)
+
+    os.remove(tmp_input_file)
+    os.rename(tmp_output_file, audio_file)
 
 @debug_args
 def extract_audio(input_path, output_path, target_dbfs):
