@@ -178,11 +178,11 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
     except Exception as e:
         print(e)
         print(traceback.format_exc())
-        output_log = f"{config.dtx_title}: 失敗\n\n"
+        output_log = f"[失敗] {config.dtx_title}\n\n"
         output_log += f"{str(e)}\n{traceback.format_exc()}\n\n"
     else:
         if output_log != "":
-            output_log = f"{config.dtx_title}: 成功\n\n"
+            output_log = f"[成功] {config.dtx_title}\n\n"
 
     return [base_output_log, output_log, *config.to_dict().values()]
 
