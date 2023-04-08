@@ -93,7 +93,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                         movie_output_file_textbox = gr.Textbox(label="Output File Name", value=config.movie_output_file_name)
                     with gr.Row():
                         bgm_name_textbox = gr.Textbox(label="BGM File Name", value=config.bgm_name)
-                        thumbnail_file_textbox = gr.Textbox(label="Thumbnail File Name", value=config.movie_thumbnail_file_name)
+                        thumbnail_file_textbox = gr.Textbox(label="Thumbnail File Name", value=config.movie_thumbnail_file_name2)
                     with gr.Row():
                         movie_start_time_slider = gr.Number(value=config.movie_start_time, label="Trim Start Time")
                         movie_end_time_slider = gr.Number(value=config.movie_end_time, label="Trim End Time")

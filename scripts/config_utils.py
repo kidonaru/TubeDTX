@@ -67,7 +67,7 @@ class ProjectConfig(JsonConfig):
     movie_url: str = ""
     movie_download_file_name: str = "source.mp4"
     movie_output_file_name: str = "movie.mp4"
-    movie_thumbnail_file_name: str = "pre.jpg"
+    movie_thumbnail_file_name2: str = "pre.jpg"
     movie_start_time: float = 0.0
     movie_end_time: float = 0.0
     movie_width: int = 0
@@ -195,7 +195,7 @@ class ProjectConfig(JsonConfig):
             ARTIST = self.dtx_artist,
             COMMENT = self.dtx_comment,
             PREVIEW = self.preview_output_name,
-            PREIMAGE = self.movie_thumbnail_file_name,
+            PREIMAGE = self.movie_thumbnail_file_name2,
             BGM = self.bgm_name,
             VIDEO = self.movie_output_file_name,
             BPM = self.dtx_bpm,

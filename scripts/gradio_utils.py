@@ -97,7 +97,7 @@ def new_score_gr(url: str):
     config.save(project_path)
 
     # サムネDL
-    thumbnail_file_name = config.movie_thumbnail_file_name
+    thumbnail_file_name = config.movie_thumbnail_file_name2
     thumbnail_path = os.path.join(project_path, thumbnail_file_name)
 
     response = requests.get(thumbnail_url)
@@ -232,7 +232,7 @@ def batch_convert_all_score_gr(*args):
 def _download_video_gr(config: ProjectConfig, project_path):
     url = config.movie_url
     output_file_name = config.movie_download_file_name
-    thumbnail_file_name = config.movie_thumbnail_file_name
+    thumbnail_file_name = config.movie_thumbnail_file_name2
 
     if url == "":
         raise Exception("URLを入力してください。")
