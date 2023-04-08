@@ -153,7 +153,7 @@ def get_audio_volume(audio_file):
     return source_dBFS
 
 @debug_args
-def normalize_audio(audio_file, target_dBFS):
+def normalize_audio(audio_file, target_dBFS, bitrate):
     ext = os.path.splitext(audio_file)[1]
     tmp_input_file = get_tmp_file_path(ext)
     tmp_output_file = get_tmp_file_path(ext)
@@ -166,7 +166,7 @@ def normalize_audio(audio_file, target_dBFS):
     change_in_dBFS = target_dBFS - source_dBFS
 
     ffmpeg = get_setting("FFMPEG_BINARY")
-    cmd = [ffmpeg, '-y', '-i', tmp_input_file, '-af', f'volume={change_in_dBFS}dB', tmp_output_file]
+    cmd = [ffmpeg, '-y', '-i', tmp_input_file, '-af', f'volume={change_in_dBFS}dB', '-ab', bitrate, tmp_output_file]
     print(" ".join(cmd))
 
     subprocess.run(cmd)
@@ -175,14 +175,14 @@ def normalize_audio(audio_file, target_dBFS):
     os.rename(tmp_output_file, audio_file)
 
 @debug_args
-def extract_audio(input_path, output_path, target_dbfs):
+def extract_audio(input_path, output_path, target_dbfs, bitrate):
     with VideoFileClip(input_path) as video:
         audio = video.audio
-        audio.write_audiofile(output_path)
+        audio.write_audiofile(output_path, bitrate=bitrate)
         audio.close()
 
     if target_dbfs < 0.0:
-        normalize_audio(output_path, target_dbfs)
+        normalize_audio(output_path, target_dbfs, bitrate)
 
     print(f"Audio extract is complete. {output_path}")
 
@@ -193,9 +193,8 @@ def create_preview_audio(
         start_time,
         preview_time,
         fade_in_duration,
-        fade_out_duration
-    ):
-
+        fade_out_duration,
+        bitrate):
     with AudioFileClip(input_path) as audio:
         duration = audio.duration
         if duration > 0:
@@ -204,7 +203,7 @@ def create_preview_audio(
         trimmed_audio: AudioClip = audio.subclip(start_time, start_time + preview_time)
         trimmed_audio = trimmed_audio.fx(audio_fadein, fade_in_duration)
         trimmed_audio = trimmed_audio.fx(audio_fadeout, fade_out_duration)
-        trimmed_audio.write_audiofile(output_path)
+        trimmed_audio.write_audiofile(output_path, bitrate=bitrate)
         trimmed_audio.close()
 
     print(f"Preview creation is complete. {output_path}")

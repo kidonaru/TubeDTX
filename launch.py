@@ -42,6 +42,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 with gr.Column(scale=1, min_width=50):
                                     workspace_new_score_button = gr.Button("New", variant="primary")
                             auto_save_checkbox = gr.Checkbox(value=app_config.auto_save, label="Auto Save", visible=False)
+                            bgm_bitrate_textbox = gr.Textbox(value=app_config.bgm_bitrate, label="BGM Bitrate", visible=False)
                             workspace_reload_button = gr.Button("Reload", variant="primary")
                             workspace_video = gr.Video(source="upload")
                         with gr.TabItem("Batch"):
@@ -355,6 +356,7 @@ with gr.Blocks(title="TubeDTX") as demo:
         project_path_textbox,
         workspace_path_textbox,
         auto_save_checkbox,
+        bgm_bitrate_textbox,
 
         batch_download_movie_checkbox,
         batch_convert_movie_checkbox,

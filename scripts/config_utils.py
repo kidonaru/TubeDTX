@@ -286,6 +286,7 @@ class AppConfig(JsonConfig):
     project_path: str = ""
     workspace_path: str = ""
     auto_save: bool = True
+    bgm_bitrate: str = "192k"
 
     batch_download_movie: bool = True
     batch_convert_movie: bool = True

@@ -270,6 +270,7 @@ def _convert_video_gr(config: ProjectConfig, project_path):
     width = config.movie_width
     height = config.movie_height
     target_dbfs = config.movie_target_dbfs
+    bitrate = app_config.bgm_bitrate
 
     input_path = os.path.join(project_path, input_file_name)
     output_path = os.path.join(project_path, output_file_name)
@@ -279,7 +280,7 @@ def _convert_video_gr(config: ProjectConfig, project_path):
         os.remove(output_path)
 
     output_path = trim_and_crop_video(input_path, output_path, start_time, end_time, width, height)
-    extract_audio(output_path, bgm_path, target_dbfs)
+    extract_audio(output_path, bgm_path, target_dbfs, bitrate)
 
     output_log = "動画の処理に成功しました。\n"
     output_log += '"2. Create Preview File"タブに進んでください。\n\n'
@@ -356,6 +357,7 @@ def create_preview_gr(*args, project_path=None):
     preview_time = config.preview_duration
     fade_in_duration = config.preview_fade_in_duration
     fade_out_duration = config.preview_fade_out_duration
+    bitrate = app_config.bgm_bitrate
 
     input_path = os.path.join(project_path, input_file_name)
     output_path = os.path.join(project_path, output_file_name)
@@ -375,6 +377,7 @@ def create_preview_gr(*args, project_path=None):
         preview_time,
         fade_in_duration,
         fade_out_duration,
+        bitrate,
     )
 
     base_output_log = auto_save(config, project_path)

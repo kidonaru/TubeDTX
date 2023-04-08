@@ -181,6 +181,13 @@ TubeDTXをクローンしたディレクトリ内のresourcesフォルダにチ�
 http://127.0.0.1:7860/?__theme=dark でアクセスすればダークモードになります
 
 
+### 音質変更
+
+config.jsonの`bgm_bitrate`で指定できます。
+
+(default: 192k)
+
+
 ### Windows版 GPU版のインストール
 
 NVIDIAのGPUを使用している場合はGPU版もインストール可能ですが、オススメはしません。トラブルの起きやすいところなので。
