@@ -10,9 +10,7 @@ from moviepy.video.fx.crop import crop
 from moviepy.editor import AudioFileClip, AudioClip, VideoFileClip
 from moviepy.audio.fx.all import audio_fadein, audio_fadeout
 from moviepy.config import get_setting
-from pydub import AudioSegment
 from typing import Tuple
-from ffmpy import FFmpeg
 
 from pytube.cipher import get_throttling_function_code
 import requests

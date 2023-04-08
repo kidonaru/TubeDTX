@@ -113,7 +113,7 @@ with gr.Blocks(title="TubeDTX") as demo:
 
             text += "- Trim Start/End Time: 切り取り時間を指定します\n"
             text += "- Crop Width/Height: 動画のクリップするサイズを指定します\n"
-            text += "- Target dBFS: 目標音量を指定します。ffmpegのインストールが必要です。0で無効化\n"
+            text += "- Target dBFS: 目標音量を指定します。YouTube標準は-12dBFS程度。0で無効化\n"
 
             gr.TextArea(text, show_label=False)
         with gr.TabItem("2. Create Preview File"):

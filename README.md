@@ -181,18 +181,6 @@ TubeDTXをクローンしたディレクトリ内のresourcesフォルダにチ�
 http://127.0.0.1:7860/?__theme=dark でアクセスすればダークモードになります
 
 
-### 音声のノーマライズ
-
-"1. Download Movie"タブの"Target dBFS"から目標音量を指定できます。 (YouTube標準は-12dBFS程度)
-
-使用にはffmpegが必要になります。
-
-- Windows: BtbN/FFmpeg-Builds (https://github.com/BtbN/FFmpeg-Builds/releases) から `ffmpeg-master-latest-win64-gpl.zip` をダウンロードし、適切な場所に展開してください。
-  PATH 環境変数に ffmpeg の実行可能ファイルがあるディレクトリを追加してください。
-- Mac: Homebrew を使用してインストールできます。
-  ターミナルで `brew install ffmpeg` を実行してください。
-
-
 ### Windows版 GPU版のインストール
 
 NVIDIAのGPUを使用している場合はGPU版もインストール可能ですが、オススメはしません。トラブルの起きやすいところなので。
