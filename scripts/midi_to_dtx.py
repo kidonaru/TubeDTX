@@ -135,6 +135,19 @@ class DtxInfo:
     LP_OFFSET: float = 0.0
     LBD_OFFSET: float = 0.0
 
+    HHC_PAN: int = 0
+    SNARE_PAN: int = 0
+    BD_PAN: int = 0
+    HT_PAN: int = 0
+    LT_PAN: int = 0
+    CYMBAL_PAN: int = 0
+    FT_PAN: int = 0
+    HHO_PAN: int = 0
+    RIDE_PAN: int = 0
+    LC_PAN: int = 0
+    LP_PAN: int = 0
+    LBD_PAN: int = 0
+
     CHIP_RESOLUTION: int = 32
     BGM_RESOLUTION: int = 128
     SHIFT_TIME: float = 0.0
@@ -462,14 +475,31 @@ def midi_to_dtx(midi_file, output_path, output_image_path, dtx_info: DtxInfo):
         dtx_info.LP_VOLUME,
         dtx_info.LBD_VOLUME,
     ]
+    wav_pans = [
+        dtx_info.HHC_PAN,
+        dtx_info.SNARE_PAN,
+        dtx_info.BD_PAN,
+        dtx_info.HT_PAN,
+        dtx_info.LT_PAN,
+        dtx_info.FT_PAN,
+        dtx_info.CYMBAL_PAN,
+        dtx_info.HHO_PAN,
+        dtx_info.RIDE_PAN,
+        dtx_info.LC_PAN,
+        dtx_info.LP_PAN,
+        dtx_info.LBD_PAN,
+    ]
     wav_volumes = [v * dtx_info.WAV_VOLUME / 100 for v in wav_volumes]
     for i in range(0, wav_splits * len(wav_names)):
         group_index = i // wav_splits
         wav_name = wav_names[group_index]
         wav_volume = wav_volumes[group_index]
+        wav_pan = wav_pans[group_index]
         wav_number_str = np.base_repr(i + 2, 36).rjust(2, "0")
         dtx_text += f"#WAV{wav_number_str}: {wav_name}\n"
         dtx_text += f"#VOLUME{wav_number_str}: {int((wav_volume / wav_splits) * (i % wav_splits + 1))}\n"
+        if wav_pan != 0:
+            dtx_text += f"#PAN{wav_number_str}: {wav_pan}\n"
 
     dtx_text += f"""
 #AVI01: {dtx_info.VIDEO}

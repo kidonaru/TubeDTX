@@ -1,7 +1,7 @@
 import gradio as gr
 
 from scripts.config_utils import ProjectConfig, app_config
-from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
+from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
 
@@ -42,11 +42,13 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 with gr.Column(scale=1, min_width=50):
                                     workspace_new_score_button = gr.Button("New", variant="primary")
                             auto_save_checkbox = gr.Checkbox(value=app_config.auto_save, label="Auto Save", visible=False)
+                            bgm_bitrate_textbox = gr.Textbox(value=app_config.bgm_bitrate, label="BGM Bitrate", visible=False)
                             workspace_reload_button = gr.Button("Reload", variant="primary")
                             workspace_video = gr.Video(source="upload")
                         with gr.TabItem("Batch"):
                             batch_output = gr.Textbox(show_label=False)
                             batch_download_movie_checkbox = gr.Checkbox(value=app_config.batch_download_movie, label="1. Download Movie")
+                            batch_convert_movie_checkbox = gr.Checkbox(value=app_config.batch_convert_movie, label="1.5. Convert Movie")
                             batch_create_preview_checkbox = gr.Checkbox(value=app_config.batch_create_preview, label="2. Create Preview File")
                             batch_separate_music_checkbox = gr.Checkbox(value=app_config.batch_separate_music, label="3. Separate Music")
                             batch_convert_to_midi_checkbox = gr.Checkbox(value=app_config.batch_convert_to_midi, label="4. Convert to MIDI")
@@ -79,9 +81,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                 with gr.Column():
                     add_space(1)
                     with gr.Row():
-                        movie_download_button = gr.Button("Download & Convert", variant="primary")
-                        movie_convert_button = gr.Button("Convert", variant="primary")
+                        movie_download_and_convert_button = gr.Button("Download & Convert", variant="primary")
                     with gr.Row():
+                        movie_download_button = gr.Button("Download")
+                        movie_convert_button = gr.Button("Convert")
                         movie_refresh_button = gr.Button("Refresh")
                     with gr.Row():
                         movie_url_textbox = gr.Textbox(label="YouTube URL", value=config.movie_url)
@@ -90,13 +93,14 @@ with gr.Blocks(title="TubeDTX") as demo:
                         movie_output_file_textbox = gr.Textbox(label="Output File Name", value=config.movie_output_file_name)
                     with gr.Row():
                         bgm_name_textbox = gr.Textbox(label="BGM File Name", value=config.bgm_name)
-                        thumbnail_file_textbox = gr.Textbox(label="Thumbnail File Name", value=config.movie_thumbnail_file_name)
+                        thumbnail_file_textbox = gr.Textbox(label="Thumbnail File Name", value=config.movie_thumbnail_file_name2)
                     with gr.Row():
-                        movie_start_time_slider = gr.Slider(0, 600, value=config.movie_start_time, step=1, label="Trim Start Time")
-                        movie_end_time_slider = gr.Slider(0, 600, value=config.movie_end_time, step=1, label="Trim End Time")
+                        movie_start_time_slider = gr.Number(value=config.movie_start_time, label="Trim Start Time")
+                        movie_end_time_slider = gr.Number(value=config.movie_end_time, label="Trim End Time")
                     with gr.Row():
-                        movie_width_slider = gr.Slider(0, 2560, value=config.movie_width, step=1, label="Crop Width")
-                        movie_height_slider = gr.Slider(0, 1440, value=config.movie_height, step=1, label="Crop Height")
+                        movie_width_slider = gr.Number(value=config.movie_width, label="Crop Width")
+                        movie_height_slider = gr.Number(value=config.movie_height, label="Crop Height")
+                    movie_target_dbfs_slider = gr.Slider(value=config.movie_target_dbfs, label="Target dBFS", minimum=-30, maximum=0, step=1)
                 with gr.Column():
                     movie_output = gr.Textbox(show_label=False)
                     movie_input_video = gr.Video(label="Input", source="upload")
@@ -110,6 +114,7 @@ with gr.Blocks(title="TubeDTX") as demo:
 
             text += "- Trim Start/End Time: 切り取り時間を指定します\n"
             text += "- Crop Width/Height: 動画のクリップするサイズを指定します\n"
+            text += "- Target dBFS: 目標音量を指定します。YouTube標準は-12dBFS程度。0で無効化\n"
 
             gr.TextArea(text, show_label=False)
         with gr.TabItem("2. Create Preview File"):
@@ -121,11 +126,12 @@ with gr.Blocks(title="TubeDTX") as demo:
                     with gr.Row():
                         preview_reload_button = gr.Button("Refresh")
                     preview_output_name_textbox = gr.Textbox(label="Preview File Name", value=config.preview_output_name)
-                    preview_start_time_slider = gr.Slider(0, 300, value=config.preview_start_time, label="Preview Start Time")
-                    preview_duration_slider = gr.Slider(0, 120, value=config.preview_duration, label="Preview Duration")
                     with gr.Row():
-                        preview_fade_in_duration_slider = gr.Slider(0, 10, value=config.preview_fade_in_duration, label="Fade In Duration")
-                        preview_fade_out_duration_slider = gr.Slider(0, 10, value=config.preview_fade_out_duration, label="Fade Out Duration")
+                        preview_start_time_slider = gr.Number(value=config.preview_start_time, label="Preview Start Time")
+                        preview_duration_slider = gr.Number(value=config.preview_duration, label="Preview Duration")
+                    with gr.Row():
+                        preview_fade_in_duration_slider = gr.Number(value=config.preview_fade_in_duration, label="Fade In Duration")
+                        preview_fade_out_duration_slider = gr.Number(value=config.preview_fade_out_duration, label="Fade Out Duration")
                 with gr.Column():
                     preview_output = gr.Textbox(show_label=False)
                     preview_input_audio = gr.Audio(label="Input", source="upload", type="filepath")
@@ -168,7 +174,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                         midi_convert_test_button = gr.Button("Convert Test")
                     with gr.Tabs():
                         with gr.TabItem("Base"):
-                            midi_input_name_textbox = gr.Textbox(label="Input File Name", value=config.midi_input_name)
+                            midi_input_name_textbox = gr.Textbox(label="Input File Name", value=config.midi_input_name2)
                             midi_resolution_slider = gr.Slider(0, 16, step=1, value=config.midi_resolution, label="Resolution")
                             with gr.Row():
                                 midi_threshold_slider = gr.Slider(0, 1, value=config.midi_threshold, label="Threshold")
@@ -178,12 +184,15 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 midi_onset_delta_slider = gr.Slider(0, 1, step=0.01, value=config.midi_onset_delta, label="Onset Delta")
                             with gr.Row():
                                 midi_disable_hh_frame_slider = gr.Slider(0, 10, step=1, value=config.midi_disable_hh_frame, label="Disable HH Frame")
-                                midi_adjust_offset_frame_slider = gr.Slider(0, 10, step=1, value=config.midi_adjust_offset_frame, label="Adjust Offset Frame")
+                                midi_adjust_offset_count_slider = gr.Slider(0, 10, step=1, value=config.midi_adjust_offset_count, label="Adjust Offset Count")
+                            with gr.Row():
+                                midi_adjust_offset_min_slider = gr.Slider(-20, 0, step=1, value=config.midi_adjust_offset_min, label="Adjust Offset Min")
+                                midi_adjust_offset_max_slider = gr.Slider(0, 20, step=1, value=config.midi_adjust_offset_max, label="Adjust Offset Max")
                             with gr.Row():
                                 midi_velocity_max_percentile_slider = gr.Slider(0, 100, step=1, value=config.midi_velocity_max_percentile, label="Velocity Max Percentile")
                             with gr.Row():
-                                midi_test_offset_slider = gr.Slider(0, 512, step=1, value=config.midi_test_offset, label="Test Offset")
-                                midi_test_duration_slider = gr.Slider(0, 512, step=1, value=config.midi_test_duration, label="Test Duration")
+                                midi_test_offset_slider = gr.Number(value=config.midi_test_offset, label="Test Offset")
+                                midi_test_duration_slider = gr.Number(value=config.midi_test_duration, label="Test Duration")
                         with gr.TabItem("Pitch"):
                             with gr.Row():
                                 midi_bd_min_slider = gr.Slider(0, 127, step=1, value=config.bd_min, label="BD Min")
@@ -216,7 +225,8 @@ with gr.Blocks(title="TubeDTX") as demo:
             text += "- Hop Length: 解析時の移動幅(フレーム数)\n"
             text += "- Onset Delta: Onset検出の感度。下げると小さい音も拾いやすくなりますが、ノイズも乗りやすくなります\n"
             text += "- Disable HH Frame: 指定フレーム内にノーツがある場合、ハイハットを無効化します\n"
-            text += "- Adjust Offset Frame: Onsetに合わせて調整する最大フレーム数\n"
+            text += "- Adjust Offset Count: Onsetに合わせて調整する施行回数\n"
+            text += "- Adjust Offset Min/Max: Onsetに合わせて調整するフレーム範囲\n"
             text += "- Velocity Max Percentile: Velocityの最大値に対応するnパーセンタイル\n"
             text += "- Test Offset: 音高確認画像の開始位置(秒)\n"
             text += "- Test Duration: 音高確認画像の再生時間(秒)\n\n"
@@ -262,52 +272,64 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 dtx_hhc_wav_textbox = gr.Textbox(label="HiHatClose", value=config.hhc_wav)
                                 dtx_hhc_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.hhc_volume)
                                 dtx_hhc_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.hhc_offset)
+                                dtx_hhc_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.hhc_pan)
                             with gr.Row():
                                 dtx_snare_wav_textbox = gr.Textbox(label="Snare", value=config.snare_wav)
                                 dtx_snare_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.snare_volume)
                                 dtx_snare_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.snare_offset)
+                                dtx_snare_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.snare_pan)
                             with gr.Row():
                                 dtx_bd_wav_textbox = gr.Textbox(label="BassDrum", value=config.bd_wav)
                                 dtx_bd_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.bd_volume)
                                 dtx_bd_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.bd_offset2)
+                                dtx_bd_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.bd_pan)
                             with gr.Row():
                                 dtx_ht_wav_textbox = gr.Textbox(label="HighTom", value=config.ht_wav)
                                 dtx_ht_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.ht_volume)
                                 dtx_ht_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.ht_offset)
+                                dtx_ht_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.ht_pan)
                             with gr.Row():
                                 dtx_lt_wav_textbox = gr.Textbox(label="LowTom", value=config.lt_wav)
                                 dtx_lt_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.lt_volume)
                                 dtx_lt_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.lt_offset)
+                                dtx_lt_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.lt_pan)
                             with gr.Row():
                                 dtx_cymbal_wav_textbox = gr.Textbox(label="Cymbal", value=config.cymbal_wav)
                                 dtx_cymbal_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.cymbal_volume)
                                 dtx_cymbal_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.cymbal_offset)
+                                dtx_cymbal_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.cymbal_pan)
                             dtx_reset_wav_button1 = gr.Button("Reset").style(full_width=False, size='sm')
                         with gr.TabItem("Chips 2"):
                             with gr.Row():
                                 dtx_ft_wav_textbox = gr.Textbox(label="FloorTom", value=config.ft_wav)
                                 dtx_ft_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.ft_volume)
                                 dtx_ft_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.ft_offset)
+                                dtx_ft_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.ft_pan)
                             with gr.Row():
                                 dtx_hho_wav_textbox = gr.Textbox(label="HiHatOpen", value=config.hho_wav)
                                 dtx_hho_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.hho_volume)
                                 dtx_hho_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.hho_offset)
+                                dtx_hho_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.hho_pan)
                             with gr.Row():
                                 dtx_ride_wav_textbox = gr.Textbox(label="RideCymbal", value=config.ride_wav)
                                 dtx_ride_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.ride_volume)
                                 dtx_ride_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.ride_offset)
+                                dtx_ride_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.ride_pan)
                             with gr.Row():
                                 dtx_lc_wav_textbox = gr.Textbox(label="LeftCymbal", value=config.lc_wav)
                                 dtx_lc_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.lc_volume)
                                 dtx_lc_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.lc_offset)
+                                dtx_lc_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.lc_pan)
                             with gr.Row():
                                 dtx_lp_wav_textbox = gr.Textbox(label="LeftPedal", value=config.lp_wav)
                                 dtx_lp_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.lp_volume)
                                 dtx_lp_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.lp_offset)
+                                dtx_lp_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.lp_pan)
                             with gr.Row():
                                 dtx_lbd_wav_textbox = gr.Textbox(label="LeftBassDrum", value=config.lbd_wav)
                                 dtx_lbd_volume_slider = gr.Slider(0, 100, label="Volume", step=1, value=config.lbd_volume)
                                 dtx_lbd_offset_slider = gr.Slider(-1, 1, label="Offset", step=0.01, value=config.lbd_offset)
+                                dtx_lbd_pan_slider = gr.Slider(-100, 100, label="Pan", step=1, value=config.lbd_pan)
                             dtx_reset_wav_button2 = gr.Button("Reset").style(full_width=False, size='sm')
                 with gr.Column():
                     dtx_output = gr.Textbox(show_label=False)
@@ -338,8 +360,10 @@ with gr.Blocks(title="TubeDTX") as demo:
         project_path_textbox,
         workspace_path_textbox,
         auto_save_checkbox,
+        bgm_bitrate_textbox,
 
         batch_download_movie_checkbox,
+        batch_convert_movie_checkbox,
         batch_create_preview_checkbox,
         batch_separate_music_checkbox,
         batch_convert_to_midi_checkbox,
@@ -388,6 +412,19 @@ with gr.Blocks(title="TubeDTX") as demo:
         dtx_lc_offset_slider,
         dtx_lp_offset_slider,
         dtx_lbd_offset_slider,
+
+        dtx_hhc_pan_slider,
+        dtx_snare_pan_slider,
+        dtx_bd_pan_slider,
+        dtx_ht_pan_slider,
+        dtx_lt_pan_slider,
+        dtx_cymbal_pan_slider,
+        dtx_ft_pan_slider,
+        dtx_hho_pan_slider,
+        dtx_ride_pan_slider,
+        dtx_lc_pan_slider,
+        dtx_lp_pan_slider,
+        dtx_lbd_pan_slider,
     ]
 
     inputs = [
@@ -401,6 +438,7 @@ with gr.Blocks(title="TubeDTX") as demo:
         movie_end_time_slider,
         movie_width_slider,
         movie_height_slider,
+        movie_target_dbfs_slider,
 
         preview_output_name_textbox,
         preview_start_time_slider,
@@ -418,7 +456,9 @@ with gr.Blocks(title="TubeDTX") as demo:
         midi_hop_length_slider,
         midi_onset_delta_slider,
         midi_disable_hh_frame_slider,
-        midi_adjust_offset_frame_slider,
+        midi_adjust_offset_count_slider,
+        midi_adjust_offset_min_slider,
+        midi_adjust_offset_max_slider,
         midi_velocity_max_percentile_slider,
         midi_test_offset_slider,
         midi_test_duration_slider,
@@ -527,7 +567,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                                                     *inputs,
                                             ])
 
-    movie_download_button.click(download_and_convert_video_gr,
+    movie_download_and_convert_button.click(download_and_convert_video_gr,
                           inputs=inputs,
                           outputs=[
                                 base_output,
@@ -536,6 +576,22 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 movie_output_video,
                                 movie_output_audio,
                                 dtx_title_textbox,
+                                dtx_artist_textbox,
+                                dtx_comment_textbox,
+                                project_image,
+                          ])
+
+    movie_download_button.click(download_video_gr,
+                          inputs=inputs,
+                          outputs=[
+                                base_output,
+                                movie_output,
+                                movie_input_video,
+                                movie_output_video,
+                                movie_output_audio,
+                                dtx_title_textbox,
+                                dtx_artist_textbox,
+                                dtx_comment_textbox,
                                 project_image,
                           ])
 

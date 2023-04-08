@@ -41,6 +41,23 @@ def get_peak_frame_data(frame_data, samples_num, frame_clip):
 
     return peak_frame_data
 
+def percentile_average(data: list) -> float:
+    if len(data) == 0:
+        print("データがありません")
+        return 0
+
+    data_sorted = sorted(data)
+    lower_bound = np.percentile(data_sorted, 25)
+    upper_bound = np.percentile(data_sorted, 75)
+
+    selected_data = [x for x in data_sorted if lower_bound <= x <= upper_bound]
+
+    if len(selected_data) == 0:
+        print("対象パーセンタイルにデータがありません")
+        return np.mean(data)
+
+    return np.mean(selected_data)
+
 @debug_args
 def convert_to_midi_drums(
         output_path,
@@ -54,7 +71,9 @@ def convert_to_midi_drums(
         hop_length,
         onset_delta,
         disable_hh_frame,
-        adjust_offset_frame,
+        adjust_offset_count,
+        adjust_offset_min,
+        adjust_offset_max,
         velocity_max_percentile,
         config: ProjectConfig):
     # 音声ファイルの読み込みと解析
@@ -79,12 +98,6 @@ def convert_to_midi_drums(
                     onset = t + i
         return onset
 
-    def get_offset_frame(t):
-        onset = get_onset_nearest(t, -adjust_offset_frame, adjust_offset_frame)
-        if onset is not None:
-            return onset - t
-        return None
-
     # MIDIファイルの作成
     midi_data = pretty_midi.PrettyMIDI(resolution=bpm * resolution, initial_tempo=bpm)
 
@@ -99,7 +112,6 @@ def convert_to_midi_drums(
 
     velocities_map: dict[int, list[float]] = {}
     disable_hh_frames = set()
-    offset_frames_map: dict[int, list[int]] = {}
 
     for t, frame in enumerate(C.T):
         frame_data = {i + 24: power for i, power in enumerate(frame)}
@@ -160,6 +172,7 @@ def convert_to_midi_drums(
                 start = start_frame * frame_time
                 end = start + frame_time
                 note = pretty_midi.Note(velocity=velocity, pitch=pitch, start=start, end=end)
+                note.start_frame = start_frame
                 track.notes.append(note)
 
                 if pitch not in velocities_map:
@@ -170,30 +183,44 @@ def convert_to_midi_drums(
                 if onset is not None:
                     disable_hh_frames.add(onset)
 
-                offset_frame = get_offset_frame(start_frame)
-                if offset_frame is not None:
-                    if pitch not in offset_frames_map:
-                        offset_frames_map[pitch] = []
-                    offset_frames_map[pitch].append(offset_frame)
-
         prev_drums_frame_data = drums_frame_data
 
-    # offset計算
-    offset_time_map: dict[int, float] = {}
-    for pitch, offset_frames in offset_frames_map.items():
-        q1 = np.percentile(offset_frames, 25)
-        q3 = np.percentile(offset_frames, 75)
-        offset_frame = np.mean([q3, q1])
-        offset_time_map[pitch] = offset_frame * frame_time
-        print(f"pitch:{pitch} offset_frame:{offset_frame}")
+    def get_offset_frame(t):
+        onset = get_onset_nearest(t, adjust_offset_min, adjust_offset_max)
+        if onset is not None:
+            return onset - t
+        return None
 
-    # offset適用
-    for note in track.notes:
-        note: pretty_midi.Note
-        if note.pitch in offset_time_map:
-            offset_time = offset_time_map[note.pitch]
-            note.start += offset_time
-            note.end += offset_time
+    # offsetの調整
+    for i in range(adjust_offset_count):
+        # offset取得
+        offset_frames_map: dict[int, list[int]] = {}
+        for note in track.notes:
+            note: pretty_midi.Note
+            offset_frame = get_offset_frame(note.start_frame)
+            if offset_frame is not None:
+                if note.pitch not in offset_frames_map:
+                    offset_frames_map[note.pitch] = []
+                offset_frames_map[note.pitch].append(offset_frame)
+
+        # offset計算
+        offset_frame_map: dict[int, float] = {}
+        for pitch, offset_frames in offset_frames_map.items():
+            offset_frame = percentile_average(offset_frames)
+            if i < adjust_offset_count - 1: # 最後のループ以外は切り捨て
+                offset_frame = int(offset_frame)
+            offset_frame_map[pitch] = offset_frame
+            print(f"pitch:{pitch} offset_frame:{offset_frame}")
+
+        # offset適用
+        for note in track.notes:
+            note: pretty_midi.Note
+            if note.pitch in offset_frame_map:
+                offset_frame = offset_frame_map[note.pitch]
+                offset_time = offset_frame * frame_time
+                note.start_frame += offset_frame
+                note.start += offset_time
+                note.end += offset_time
 
     # ハイハット推定
     # onsetがあってノーツがない場合はハイハット扱い

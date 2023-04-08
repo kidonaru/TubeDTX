@@ -1,16 +1,16 @@
+from contextlib import nullcontext
 from dataclasses import asdict
 import datetime
-from multiprocessing import Pool
+import multiprocessing as mp
 import os
-import random
 import shutil
-import string
+import traceback
 import gradio as gr
 import requests
 
 from scripts.config_utils import AppConfig, ProjectConfig, app_config
 from scripts.debug_utils import debug_args
-from scripts.media_utils import create_preview_audio, download_video, extract_audio, get_video_info, trim_and_crop_video
+from scripts.media_utils import convert_audio, create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
 from scripts.convert_to_midi import convert_to_midi_cqt, convert_to_midi_drums, convert_to_midi_peak, output_test_image
 from scripts.midi_to_dtx import midi_to_dtx
@@ -97,7 +97,7 @@ def new_score_gr(url: str):
     config.save(project_path)
 
     # サムネDL
-    thumbnail_file_name = config.movie_thumbnail_file_name
+    thumbnail_file_name = config.movie_thumbnail_file_name2
     thumbnail_path = os.path.join(project_path, thumbnail_file_name)
 
     response = requests.get(thumbnail_url)
@@ -123,7 +123,7 @@ def reload_workspace_gr():
     return gallery
 
 @debug_args
-def _batch_convert_gr(project_path):
+def _batch_convert_gr(lock: mp.Lock, project_path):
     config = ProjectConfig.load(project_path)
 
     base_output_log = ""
@@ -133,47 +133,56 @@ def _batch_convert_gr(project_path):
         output_path = os.path.join(project_path, file_name)
         return app_config.batch_skip_converted and os.path.exists(output_path)
 
-    if app_config.batch_download_movie:
-        if not check_converted(config.bgm_name):
-            outputs = download_and_convert_video_gr(*config.to_dict().values(), project_path=project_path)
-            config = ProjectConfig.load(project_path)
-            base_output_log = outputs[0]
-            output_log += outputs[1]
+    try:
+        if app_config.batch_download_movie:
+            if not check_converted(config.movie_download_file_name):
+                outputs = download_video_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
-    if app_config.batch_create_preview:
-        if not check_converted(config.preview_output_name):
-            outputs = create_preview_gr(*config.to_dict().values(), project_path=project_path)
-            config = ProjectConfig.load(project_path)
-            base_output_log = outputs[0]
-            output_log += outputs[1]
+        if app_config.batch_convert_movie:
+            if not check_converted(config.bgm_name):
+                outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
-    if app_config.batch_separate_music:
-        if not check_converted("drums.wav"):
-            outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path)
-            config = ProjectConfig.load(project_path)
-            base_output_log = outputs[0]
-            output_log += outputs[1]
+        if app_config.batch_create_preview:
+            if not check_converted(config.preview_output_name):
+                outputs = create_preview_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
-    if app_config.batch_convert_to_midi:
-        if not check_converted("drums.mid"):
-            outputs = convert_to_midi_gr(*config.to_dict().values(), project_path=project_path)
-            config = ProjectConfig.load(project_path)
-            base_output_log = outputs[0]
-            output_log += outputs[1]
+        if app_config.batch_separate_music:
+            if not check_converted("drums.wav"):
+                outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path, lock=lock)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
-    if app_config.batch_convert_to_dtx:
-        if not check_converted(config.dtx_output_name):
-            outputs = midi_to_dtx_gr(*config.to_dict().values(), project_path=project_path)
-            config = ProjectConfig.load(project_path)
-            base_output_log = outputs[0]
-            output_log += outputs[1]
+        if app_config.batch_convert_to_midi:
+            if not check_converted("drums.mid"):
+                outputs = convert_to_midi_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
 
-    # ログに譜面名を追加
-    if len(output_log) > 0:
-        header_log = f"==============================\n"
-        header_log += f"{config.dtx_title}\n"
-        header_log += f"==============================\n\n"
-        output_log = header_log + output_log
+        if app_config.batch_convert_to_dtx:
+            if not check_converted(config.dtx_output_name):
+                outputs = midi_to_dtx_gr(*config.to_dict().values(), project_path=project_path)
+                config = ProjectConfig.load(project_path)
+                base_output_log = outputs[0]
+                output_log += outputs[1]
+    except Exception as e:
+        print(e)
+        print(traceback.format_exc())
+        output_log = f"[失敗] {config.dtx_title}\n\n"
+        output_log += f"{str(e)}\n{traceback.format_exc()}\n\n"
+    else:
+        if output_log != "":
+            output_log = f"[成功] {config.dtx_title}\n\n"
 
     return [base_output_log, output_log, *config.to_dict().values()]
 
@@ -183,8 +192,10 @@ def batch_convert_selected_score_gr(*args):
     app_config = AppConfig(*args)
     app_config.save(".")
 
-    outputs = _batch_convert_gr(app_config.project_path)
+    lock = mp.Manager().Lock()
+    outputs = _batch_convert_gr(lock, app_config.project_path)
 
+    outputs[1] += f"==============================\n\n"
     outputs[1] += "全てのバッチ処理が完了しました。\n\n"
 
     return outputs
@@ -200,8 +211,9 @@ def batch_convert_all_score_gr(*args):
     base_output_log = ""
     output_log = ""
 
-    pool = Pool(app_config.batch_jobs)
-    result = pool.map(_batch_convert_gr, project_paths)
+    pool = mp.Pool(app_config.batch_jobs)
+    lock = mp.Manager().Lock()
+    result = pool.starmap(_batch_convert_gr, [(lock, p) for p in project_paths])
 
     index = project_paths.index(app_config.project_path)
     base_output_log = result[index][0]
@@ -209,11 +221,42 @@ def batch_convert_all_score_gr(*args):
     for outputs in result:
         output_log += outputs[1]
 
+    output_log += f"==============================\n\n"
     output_log += "全てのバッチ処理が完了しました。\n\n"
 
     config = ProjectConfig.load(app_config.project_path)
 
     return [base_output_log, output_log, *config.to_dict().values()]
+
+@debug_args
+def _download_video_gr(config: ProjectConfig, project_path):
+    url = config.movie_url
+    output_file_name = config.movie_download_file_name
+    thumbnail_file_name = config.movie_thumbnail_file_name2
+
+    if url == "":
+        raise Exception("URLを入力してください。")
+
+    output_path = os.path.join(project_path, output_file_name)
+    thumbnail_path = os.path.join(project_path, thumbnail_file_name)
+
+    comment, title, artist, duration, width, height = download_video(url, output_path, thumbnail_path)
+
+    config.dtx_title = title
+    config.dtx_artist = artist
+    config.dtx_comment = comment
+
+    output_log = "動画のダウンロードに成功しました。\n"
+    output_log += '"2. Create Preview File"タブに進んでください。\n\n'
+
+    output_log += f"title: {title}\n"
+    output_log += f"artist: {artist}\n"
+    output_log += f"duration: {duration}\n"
+    output_log += f"dimensions: {width} x {height}\n\n"
+
+    base_output_log = auto_save(config, project_path)
+
+    return [base_output_log, output_log, output_path, None, None, title, artist, comment, thumbnail_path]
 
 @debug_args
 def _convert_video_gr(config: ProjectConfig, project_path):
@@ -224,13 +267,18 @@ def _convert_video_gr(config: ProjectConfig, project_path):
     end_time = config.movie_end_time
     width = config.movie_width
     height = config.movie_height
+    target_dbfs = config.movie_target_dbfs
+    bitrate = app_config.bgm_bitrate
 
     input_path = os.path.join(project_path, input_file_name)
     output_path = os.path.join(project_path, output_file_name)
     bgm_path = os.path.join(project_path, bgm_file_name)
 
-    trim_and_crop_video(input_path, output_path, start_time, end_time, width, height)
-    extract_audio(output_path, bgm_path)
+    if os.path.exists(output_path):
+        os.remove(output_path)
+
+    output_path = trim_and_crop_video(input_path, output_path, start_time, end_time, width, height, bitrate)
+    extract_audio(output_path, bgm_path, target_dbfs, bitrate)
 
     output_log = "動画の処理に成功しました。\n"
     output_log += '"2. Create Preview File"タブに進んでください。\n\n'
@@ -244,32 +292,26 @@ def download_and_convert_video_gr(*args, project_path=None):
     project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
-    url = config.movie_url
-    output_file_name = config.movie_download_file_name
-    thumbnail_file_name = config.movie_thumbnail_file_name
-
-    if url == "":
-        raise Exception("URLを入力してください。")
-
-    output_path = os.path.join(project_path, output_file_name)
-    thumbnail_path = os.path.join(project_path, thumbnail_file_name)
-
-    title, duration, width, height = download_video(url, output_path, thumbnail_path)
-
-    config.dtx_title = title
-    config.movie_thumbnail_file_name = thumbnail_path
+    download_outputs = _download_video_gr(config, project_path)
 
     outputs = _convert_video_gr(config, project_path)
 
-    output_log = "動画のダウンロードと変換に成功しました。\n"
-    output_log += '"2. Create Preview File"タブに進んでください。\n\n'
+    outputs[1] = download_outputs[1] + outputs[1]
+    outputs.append(download_outputs[5])
+    outputs.append(download_outputs[6])
+    outputs.append(download_outputs[7])
+    outputs.append(download_outputs[8])
 
-    output_log += f"title: {title}\n"
-    output_log += f"duration: {duration}\n"
-    output_log += f"dimensions: {width} x {height}\n\n"
-    outputs[1] = output_log
+    return outputs
 
-    return [*outputs, title, thumbnail_path]
+@debug_args
+def download_video_gr(*args, project_path=None):
+    project_path = project_path or app_config.project_path
+    config = ProjectConfig(*args)
+
+    outputs = _download_video_gr(config, project_path)
+
+    return outputs
 
 @debug_args
 def convert_video_gr(*args, project_path=None):
@@ -313,6 +355,7 @@ def create_preview_gr(*args, project_path=None):
     preview_time = config.preview_duration
     fade_in_duration = config.preview_fade_in_duration
     fade_out_duration = config.preview_fade_out_duration
+    bitrate = app_config.bgm_bitrate
 
     input_path = os.path.join(project_path, input_file_name)
     output_path = os.path.join(project_path, output_file_name)
@@ -332,6 +375,7 @@ def create_preview_gr(*args, project_path=None):
         preview_time,
         fade_in_duration,
         fade_out_duration,
+        bitrate,
     )
 
     base_output_log = auto_save(config, project_path)
@@ -356,49 +400,51 @@ def reload_preview_gr(*args, project_path=None):
 
     return [base_output_log, output_log, input_path, output_path]
 
+def safe_remove_file(file_path):
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
 @debug_args
 def force_copy_file(input_path, output_path):
-    if os.path.exists(output_path):
-        os.remove(output_path)
+    safe_remove_file(output_path)
     shutil.copyfile(input_path, output_path)
 
-def randomname(n):
-   return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
-
 @debug_args
-def separate_music_gr(*args, project_path=None):
+def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
     project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
     model = config.separate_model
-    bgm_name = config.bgm_name
+    input_file = config.bgm_name
+    output_file = config.midi_input_name2
     jobs = config.separate_jobs
+    bitrate = app_config.bgm_bitrate
 
-    input_path = os.path.join(project_path, bgm_name)
+    input_path = os.path.join(project_path, input_file)
+    output_path = os.path.join(project_path, output_file)
+
     if not os.path.exists(input_path):
-        return [f"BGMが見つかりません。 {input_path}", None]
-
-    tmp_dir = os.path.join(".", "tmp")
-    if not os.path.isdir(tmp_dir):
-        os.mkdir(tmp_dir)
+        raise Exception(f"BGMが見つかりません。 {input_path}")
 
     # 全角文字が入ってるとコンバートに失敗するので作業ディレクトリに移動する
-    tmp_input_path = os.path.join(tmp_dir, randomname(10) + os.path.splitext(bgm_name)[1])
+    tmp_dir = get_tmp_dir()
+    tmp_input_path = get_tmp_file_path(os.path.splitext(input_path)[1])
     force_copy_file(input_path, tmp_input_path)
-
-    separate_music(model, tmp_dir, tmp_input_path, jobs)
 
     # 一時出力先パス
     basename_without_ext = os.path.splitext(os.path.basename(tmp_input_path))[0]
     tmp_output_path = os.path.join(tmp_dir, model, basename_without_ext, "drums.wav")
 
-    # ファイルのコピー
-    output_path = os.path.join(project_path, "drums.wav")
-    force_copy_file(tmp_output_path, output_path)
+    with lock if lock is not None else nullcontext():
+        separate_music(model, tmp_dir, tmp_input_path, jobs)
+
+    # 音声の変換
+    convert_audio(tmp_output_path, output_path, bitrate)
 
     # 一時ファイルの削除
-    os.remove(tmp_input_path)
-    shutil.rmtree(os.path.join(tmp_dir, model))
+    safe_remove_file(tmp_input_path)
+    shutil.rmtree(os.path.join(tmp_dir, model, basename_without_ext))
+    safe_remove_file(os.path.join(project_path, "drums.wav"))
 
     bpm = compute_bpm(output_path)
     config.dtx_bpm = bpm
@@ -416,14 +462,16 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
     project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
-    input_file_name = config.midi_input_name
+    input_file_name = config.midi_input_name2
     resolution = config.midi_resolution
     threshold = config.midi_threshold
     segmentation = config.midi_segmentation
     hop_length = config.midi_hop_length
     onset_delta = config.midi_onset_delta
     disable_hh_frame = config.midi_disable_hh_frame
-    adjust_offset_frame = config.midi_adjust_offset_frame
+    adjust_offset_count = config.midi_adjust_offset_count
+    adjust_offset_min = config.midi_adjust_offset_min
+    adjust_offset_max = config.midi_adjust_offset_max
     velocity_max_percentile = config.midi_velocity_max_percentile
     bpm = config.dtx_bpm
 
@@ -447,7 +495,9 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
             hop_length,
             onset_delta,
             disable_hh_frame,
-            adjust_offset_frame,
+            adjust_offset_count,
+            adjust_offset_min,
+            adjust_offset_max,
             velocity_max_percentile,
             config)
 
@@ -474,7 +524,9 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
             hop_length,
             onset_delta,
             disable_hh_frame,
-            adjust_offset_frame,
+            adjust_offset_count,
+            adjust_offset_min,
+            adjust_offset_max,
             velocity_max_percentile,
             config)
 
@@ -591,6 +643,9 @@ def _midi_to_dtx_gr(config: ProjectConfig, project_path: str, output_image: bool
     output_path = os.path.join(project_path, output_file_name)
     output_image_path = os.path.join(project_path, output_image_name) if output_image else None
     dtx_info = config.get_dtx_info()
+
+    if not os.path.exists(os.path.join(project_path, dtx_info.VIDEO)):
+        dtx_info.VIDEO = config.movie_download_file_name
 
     dtx_text = midi_to_dtx(input_path, output_path, output_image_path, dtx_info)
 

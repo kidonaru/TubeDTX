@@ -67,11 +67,12 @@ class ProjectConfig(JsonConfig):
     movie_url: str = ""
     movie_download_file_name: str = "source.mp4"
     movie_output_file_name: str = "movie.mp4"
-    movie_thumbnail_file_name: str = "pre.jpg"
+    movie_thumbnail_file_name2: str = "pre.jpg"
     movie_start_time: float = 0.0
     movie_end_time: float = 0.0
     movie_width: int = 0
     movie_height: int = 0
+    movie_target_dbfs: float = 0.0
 
     preview_output_name: str = "pre.ogg"
     preview_start_time: float = 0.0
@@ -82,14 +83,16 @@ class ProjectConfig(JsonConfig):
     separate_model: str = "htdemucs"
     separate_jobs: int = cpu_count
 
-    midi_input_name: str = "drums.wav"
+    midi_input_name2: str = "drums.ogg"
     midi_resolution: int = 8
     midi_threshold: float = 0.2
     midi_segmentation: float = 0.9
     midi_hop_length: int = 256
     midi_onset_delta: float = 0.03
     midi_disable_hh_frame: int = 1
-    midi_adjust_offset_frame: int = 5
+    midi_adjust_offset_count: int = 2
+    midi_adjust_offset_min: int = -10
+    midi_adjust_offset_max: int = 10
     midi_velocity_max_percentile: int = 90
     midi_test_offset: float = 30.0
     midi_test_duration: float = 10.0
@@ -165,6 +168,19 @@ class ProjectConfig(JsonConfig):
     lp_offset: float = 0.0
     lbd_offset: float = 0.0
 
+    hhc_pan: int = 0
+    snare_pan: int = 0
+    bd_pan: int = 0
+    ht_pan: int = 0
+    lt_pan: int = 0
+    cymbal_pan: int = 0
+    ft_pan: int = 0
+    hho_pan: int = 0
+    ride_pan: int = 0
+    lc_pan: int = 0
+    lp_pan: int = 0
+    lbd_pan: int = 0
+
     @classmethod
     def get_config_name(cls):
         return "tube_dtx_config.json"
@@ -174,12 +190,12 @@ class ProjectConfig(JsonConfig):
         return os.path.join("resources", cls.get_config_name())
 
     def get_dtx_info(self):
-        return DtxInfo(
+        dtx_info = DtxInfo(
             TITLE = self.dtx_title,
             ARTIST = self.dtx_artist,
             COMMENT = self.dtx_comment,
             PREVIEW = self.preview_output_name,
-            PREIMAGE = self.movie_thumbnail_file_name,
+            PREIMAGE = self.movie_thumbnail_file_name2,
             BGM = self.bgm_name,
             VIDEO = self.movie_output_file_name,
             BPM = self.dtx_bpm,
@@ -224,6 +240,19 @@ class ProjectConfig(JsonConfig):
             LP_OFFSET = self.lp_offset,
             LBD_OFFSET = self.lbd_offset,
 
+            HHC_PAN = self.hhc_pan,
+            SNARE_PAN = self.snare_pan,
+            BD_PAN = self.bd_pan,
+            HT_PAN = self.ht_pan,
+            LT_PAN = self.lt_pan,
+            CYMBAL_PAN = self.cymbal_pan,
+            FT_PAN = self.ft_pan,
+            HHO_PAN = self.hho_pan,
+            RIDE_PAN = self.ride_pan,
+            LC_PAN = self.lc_pan,
+            LP_PAN = self.lp_pan,
+            LBD_PAN = self.lbd_pan,
+
             CHIP_RESOLUTION = self.dtx_chip_resolution,
             BGM_RESOLUTION = self.dtx_bgm_resolution,
             SHIFT_TIME = self.dtx_shift_time,
@@ -235,6 +264,8 @@ class ProjectConfig(JsonConfig):
             WAV_SPLITS = self.dtx_wav_splits,
             WAV_VOLUME = self.dtx_wav_volume,
         )
+
+        return dtx_info
 
     def get_resources(self):
         return [
@@ -257,8 +288,10 @@ class AppConfig(JsonConfig):
     project_path: str = ""
     workspace_path: str = ""
     auto_save: bool = True
+    bgm_bitrate: str = "192k"
 
     batch_download_movie: bool = True
+    batch_convert_movie: bool = True
     batch_create_preview: bool = True
     batch_separate_music: bool = True
     batch_convert_to_midi: bool = True
