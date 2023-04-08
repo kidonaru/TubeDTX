@@ -17,6 +17,7 @@ class TestExtractTitleAndArtist(unittest.TestCase):
             ("メンヘラじゃないもん！ /Cover 湊あくあ/紫咲シオン【ホロライブ】", ("メンヘラじゃないもん！", "Cover 湊あくあ/紫咲シオン")),
             ("KONKON Beats/白上フブキ(Original)", ("KONKON Beats", "白上フブキ(Original)")),
             ("かめりあ feat. ななひら - クリスマスなんて興味ないけど", ("クリスマスなんて興味ないけど", "かめりあ feat. ななひら")),
+            ("[Fan M/V] おちゃめ機能 (全員参加)", ("おちゃめ機能 (全員参加)", "")),
         ]
 
         for title, result in test_cases:

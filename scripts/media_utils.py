@@ -217,7 +217,8 @@ def extract_title_and_artist(youtube_title: str) -> Tuple[str, str]:
         re.compile(r'「(?P<title>[^」]+)」を歌ってみた(?P<artist>.+)'),
     ]
 
-    youtube_title = re.sub(r'【[^【】]+】', '', youtube_title)
+    youtube_title = re.sub(r'【[^【】]+】', '', youtube_title).strip()
+    youtube_title = re.sub(r'\[[^\[\]]+\]', '', youtube_title).strip()
 
     for pattern in title_patterns:
         match = pattern.search(youtube_title)
