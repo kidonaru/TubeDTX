@@ -184,7 +184,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 midi_onset_delta_slider = gr.Slider(0, 1, step=0.01, value=config.midi_onset_delta, label="Onset Delta")
                             with gr.Row():
                                 midi_disable_hh_frame_slider = gr.Slider(0, 10, step=1, value=config.midi_disable_hh_frame, label="Disable HH Frame")
-                                midi_adjust_offset_frame_slider = gr.Slider(0, 10, step=1, value=config.midi_adjust_offset_frame, label="Adjust Offset Frame")
+                                midi_adjust_offset_frame_slider = gr.Slider(0, 20, step=1, value=config.midi_adjust_offset_frame, label="Adjust Offset Frame")
                             with gr.Row():
                                 midi_velocity_max_percentile_slider = gr.Slider(0, 100, step=1, value=config.midi_velocity_max_percentile, label="Velocity Max Percentile")
                             with gr.Row():
