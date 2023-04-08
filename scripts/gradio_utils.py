@@ -157,7 +157,7 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
 
         if app_config.batch_separate_music:
             if not check_converted("drums.wav"):
-                outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path)
+                outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path, lock=lock)
                 config = ProjectConfig.load(project_path)
                 base_output_log = outputs[0]
                 output_log += outputs[1]
