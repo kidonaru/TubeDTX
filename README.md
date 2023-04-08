@@ -1,5 +1,7 @@
 # TubeDTX
 
+[![Test](https://github.com/kidonaru/TubeDTX/actions/workflows/test.yml/badge.svg)](https://github.com/kidonaru/TubeDTX/actions/workflows/test.yml)
+
 TubeDTXは、YouTubeの動画からDTX譜面を作成するアプリケーションです。
 
 
