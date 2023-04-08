@@ -110,7 +110,7 @@ def download_video(url, output_path, thumbnail_path):
     return full_title, title, artist, duration, video_size[0], video_size[1]
 
 @debug_args
-def trim_and_crop_video(input_path, output_path, start_time, end_time, width, height):
+def trim_and_crop_video(input_path, output_path, start_time, end_time, width, height, bitrate):
     # パラメータが全て0の場合は何もしない
     if start_time == 0.0 and end_time == 0.0 and width == 0 and height == 0:
         print(f"Skip trim_and_crop_video. {input_path}")
@@ -132,7 +132,7 @@ def trim_and_crop_video(input_path, output_path, start_time, end_time, width, he
                 width=width,
                 height=height)
         tmp_file = get_tmp_file_path(".m4a")
-        video.write_videofile(output_path, temp_audiofile=tmp_file, codec="libx264", audio_codec="aac")
+        video.write_videofile(output_path, temp_audiofile=tmp_file, codec="libx264", audio_codec="aac", audio_bitrate=bitrate)
         video.close()
 
     print(f"Video clipping is complete. {output_path}")

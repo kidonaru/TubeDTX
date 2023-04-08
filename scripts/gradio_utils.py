@@ -277,7 +277,7 @@ def _convert_video_gr(config: ProjectConfig, project_path):
     if os.path.exists(output_path):
         os.remove(output_path)
 
-    output_path = trim_and_crop_video(input_path, output_path, start_time, end_time, width, height)
+    output_path = trim_and_crop_video(input_path, output_path, start_time, end_time, width, height, bitrate)
     extract_audio(output_path, bgm_path, target_dbfs, bitrate)
 
     output_log = "動画の処理に成功しました。\n"
