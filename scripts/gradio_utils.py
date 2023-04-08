@@ -178,15 +178,11 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
     except Exception as e:
         print(e)
         print(traceback.format_exc())
-        output_log += f"エラーが発生しました。\n"
+        output_log = f"{config.dtx_title}: 失敗\n\n"
         output_log += f"{str(e)}\n{traceback.format_exc()}\n\n"
-
-    # ログに譜面名を追加
-    if len(output_log) > 0:
-        header_log = f"==============================\n"
-        header_log += f"{config.dtx_title}\n"
-        header_log += f"==============================\n\n"
-        output_log = header_log + output_log
+    else:
+        if output_log != "":
+            output_log = f"{config.dtx_title}: 成功\n\n"
 
     return [base_output_log, output_log, *config.to_dict().values()]
 
@@ -199,6 +195,7 @@ def batch_convert_selected_score_gr(*args):
     lock = mp.Manager().Lock()
     outputs = _batch_convert_gr(lock, app_config.project_path)
 
+    outputs[1] += f"==============================\n\n"
     outputs[1] += "全てのバッチ処理が完了しました。\n\n"
 
     return outputs
@@ -224,6 +221,7 @@ def batch_convert_all_score_gr(*args):
     for outputs in result:
         output_log += outputs[1]
 
+    output_log += f"==============================\n\n"
     output_log += "全てのバッチ処理が完了しました。\n\n"
 
     config = ProjectConfig.load(app_config.project_path)
