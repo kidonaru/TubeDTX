@@ -300,6 +300,8 @@ class AppConfig(JsonConfig):
     batch_skip_converted: bool = True
     batch_jobs: int = 1
 
+    utils_separate_audio_file: str = ""
+
     def get_project_paths(self):
         if not os.path.isdir(self.workspace_path):
             return []

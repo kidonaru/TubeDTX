@@ -1,7 +1,7 @@
 import gradio as gr
 
 from scripts.config_utils import ProjectConfig, app_config
-from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
+from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr, utils_select_separate_audio_gr, utils_separate_audio_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
 
@@ -355,6 +355,25 @@ with gr.Blocks(title="TubeDTX") as demo:
             text += "Headerタブでヘッダー情報を編集できます\n"
             text += "Chipsタブでチップ音のファイル名、音量、開始時間を編集できます\n"
             gr.TextArea(text, show_label=False)
+        with gr.TabItem("Tools"):
+            with gr.Tabs():
+                with gr.TabItem("Separate Audio"):
+                    with gr.Row():
+                        with gr.Column():
+                            add_space(1)
+                            with gr.Row():
+                                utils_separate_button = gr.Button("Separate", variant="primary")
+                            with gr.Row():
+                                with gr.Column(scale=5):
+                                    utils_separate_audio_path_textbox = gr.Textbox(label="Separate Audio Path", value=app_config.utils_separate_audio_file)
+                                with gr.Column(scale=1, min_width=50):
+                                    utils_separate_audio_open_button = gr.Button("Open", variant="primary")
+                        with gr.Column():
+                            utils_separate_output = gr.Textbox(show_label=False)
+                            utils_separate_drums_audio = gr.Audio(label="Drums", source="upload", type="filepath")
+                            utils_separate_bass_audio = gr.Audio(label="Bass", source="upload", type="filepath")
+                            utils_separate_other_audio = gr.Audio(label="Other", source="upload", type="filepath")
+                            utils_separate_vocals_audio = gr.Audio(label="Vocals", source="upload", type="filepath")
 
     app_config_inputs = [
         project_path_textbox,
@@ -371,6 +390,8 @@ with gr.Blocks(title="TubeDTX") as demo:
 
         batch_skip_converted_checkbox,
         batch_jobs_slider,
+
+        utils_separate_audio_path_textbox,
     ]
 
     dtx_wav_inputs = [
@@ -715,6 +736,23 @@ with gr.Blocks(title="TubeDTX") as demo:
                             base_output,
                             dtx_output,
                             *dtx_wav_inputs,
+                      ])
+
+    utils_separate_audio_open_button.click(utils_select_separate_audio_gr,
+                                  inputs=app_config_inputs,
+                                  outputs=[
+                                        utils_separate_output,
+                                        utils_separate_audio_path_textbox,
+                                  ])
+
+    utils_separate_button.click(utils_separate_audio_gr,
+                      inputs=app_config_inputs,
+                      outputs=[
+                            utils_separate_output,
+                            utils_separate_drums_audio,
+                            utils_separate_bass_audio,
+                            utils_separate_other_audio,
+                            utils_separate_vocals_audio,
                       ])
 
 if __name__ == "__main__":
