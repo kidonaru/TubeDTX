@@ -190,6 +190,30 @@ config.jsonの`bgm_bitrate`で指定できます。
 (default: 192k)
 
 
+### 任意のバージョンに切り替えたい
+
+TubeDTXのフォルダ内で右クリック、`Git Bash Here`でGit Bashを開いて
+```
+git checkout v1.1.0
+```
+と実行すると任意バージョンに切り替えも可能です。
+(v1.1.0は任意のバージョンを指定)
+
+切り替え後、`updaate.bat`を実行すると最新に戻ります。
+
+
+### 一部の工程を手動でやりたい
+
+各工程では下記のファイルを作っているだけなので、出力ファイルを別途用意すれば各工程をスキップすることもできます。
+1. Download Movie: source.mp4(movie.mp4)、bgm.ogg、pre.jpg
+2. Create Preview File: pre.ogg
+3. Separate Music: drums.ogg
+4. Convert to MIDI: drums.mid
+5. Convert to DTX: score.dtx
+
+各工程でTitleの自動設定やBPMの推測などもしているため、スキップした場合は手動で設定する必要があります。
+
+
 ### Windows版 GPU版のインストール
 
 NVIDIAのGPUを使用している場合はGPU版もインストール可能ですが、オススメはしません。トラブルの起きやすいところなので。
