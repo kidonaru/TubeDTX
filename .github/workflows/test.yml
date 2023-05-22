@@ -29,5 +29,9 @@ jobs:
         pip install -e .
         cd ../..
 
+        cd magenta
+        pip install -e . --no-dependencies
+        cd ..
+
     - name: Run tests
       run: python -m unittest discover -s ./tests

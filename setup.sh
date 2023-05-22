@@ -15,6 +15,10 @@ cd modules/pytube
 pip3 install -e .
 cd ../..
 
+cd magenta
+pip3 install -e . --no-dependencies
+cd ..
+
 pip3 list
 
 if [ "$skip_key_wait" != "true" ]; then

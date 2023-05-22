@@ -4,6 +4,7 @@ from scripts.config_utils import ProjectConfig, app_config, dev_config
 from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr, dev_select_separate_audio_gr, dev_separate_audio_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
+midi_models = ["original", "e-gmd"]
 
 config = ProjectConfig.load(app_config.project_path)
 
@@ -175,6 +176,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                     with gr.Tabs():
                         with gr.TabItem("Base"):
                             midi_input_name_textbox = gr.Textbox(label="Input File Name", value=config.midi_input_name2)
+                            midi_convert_model_dropdown = gr.Dropdown(midi_models, value=config.midi_convert_model, label="Model")
                             midi_resolution_slider = gr.Slider(0, 16, step=1, value=config.midi_resolution, label="Resolution")
                             with gr.Row():
                                 midi_threshold_slider = gr.Slider(0, 1, value=config.midi_threshold, label="Threshold")
@@ -481,6 +483,7 @@ with gr.Blocks(title="TubeDTX") as demo:
         separate_jobs_slider,
 
         midi_input_name_textbox,
+        midi_convert_model_dropdown,
         midi_resolution_slider,
         midi_threshold_slider,
         midi_segmentation_slider,

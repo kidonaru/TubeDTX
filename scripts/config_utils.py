@@ -84,6 +84,7 @@ class ProjectConfig(JsonConfig):
     separate_jobs: int = cpu_count
 
     midi_input_name2: str = "drums.ogg"
+    midi_convert_model: str = "e-gmd"
     midi_resolution: int = 8
     midi_threshold: float = 0.2
     midi_segmentation: float = 0.9

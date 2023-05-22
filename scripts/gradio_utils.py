@@ -452,6 +452,7 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
     adjust_offset_max = config.midi_adjust_offset_max
     velocity_max_percentile = config.midi_velocity_max_percentile
     bpm = config.dtx_bpm
+    convert_model = config.midi_convert_model
 
     input_path = os.path.join(project_path, input_file_name)
     test_image_path = None
@@ -477,6 +478,7 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
             adjust_offset_min,
             adjust_offset_max,
             velocity_max_percentile,
+            convert_model,
             config)
 
         output_log = "MIDIへの変換に成功しました。\n"
@@ -506,6 +508,7 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
             adjust_offset_min,
             adjust_offset_max,
             velocity_max_percentile,
+            convert_model,
             config)
 
         convert_to_midi_peak(

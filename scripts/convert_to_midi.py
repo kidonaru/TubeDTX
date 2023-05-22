@@ -5,6 +5,7 @@ import pretty_midi
 import numpy as np
 
 from scripts.config_utils import ProjectConfig
+from scripts.convert_to_midi_with_onsets_frames import convert_to_midi_with_onsets_frames
 from scripts.debug_utils import debug_args
 
 # Define MIDI note numbers
@@ -75,7 +76,22 @@ def convert_to_midi_drums(
         adjust_offset_min,
         adjust_offset_max,
         velocity_max_percentile,
+        convert_model,
         config: ProjectConfig):
+
+    if convert_model != "original":
+        convert_to_midi_with_onsets_frames(
+            output_path,
+            input_path,
+            offset,
+            duration,
+            bpm,
+            resolution,
+            convert_model,
+            config
+        )
+        return
+
     # 音声ファイルの読み込みと解析
     y, sr = librosa.load(input_path, offset=offset, duration=duration)
     y_normalized = librosa.util.normalize(y)

@@ -13,6 +13,10 @@ cd modules/pytube
 pip install -e .
 cd ../..
 
+cd magenta
+pip install -e . --no-dependencies
+cd ..
+
 pip list
 
 if not "%skip_key_wait%"=="true" (

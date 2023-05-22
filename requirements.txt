@@ -7,3 +7,27 @@ moviepy==1.0.3
 #pytube==15.0.0
 japanize_matplotlib==1.1.3
 beautifulsoup4
+
+# for magenta
+tensorflow
+keras
+absl-py
+dm-sonnet
+imageio
+matplotlib
+mido
+mir_eval
+note-seq
+numba
+Pillow
+pygtrie
+python-rtmidi
+scikit-image
+scipy
+six
+sk-video
+sox
+tensorflow-datasets
+tensorflow-probability
+tf_slim
+wheel
