@@ -2,17 +2,14 @@ cd %~dp0
 
 set skip_key_wait=%1
 
+git submodule update --init --recursive
+
 python.exe -m venv venv
 call venv\Scripts\activate.bat
 
 pip install --upgrade -r requirements.txt
 
-if not exist pytube (
-  git clone https://github.com/kidonaru/pytube.git
-)
-
 cd pytube
-git checkout v15.0.0-fix
 pip install -e .
 cd ..
 
