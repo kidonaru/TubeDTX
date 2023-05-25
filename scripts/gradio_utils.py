@@ -8,13 +8,13 @@ import traceback
 import gradio as gr
 import requests
 
-from scripts.config_utils import AppConfig, ProjectConfig, app_config
+from scripts.config_utils import AppConfig, ProjectConfig, DevConfig, app_config, dev_config
 from scripts.debug_utils import debug_args
 from scripts.media_utils import convert_audio, create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
 from scripts.convert_to_midi import convert_to_midi_cqt, convert_to_midi_drums, convert_to_midi_peak, output_test_image
 from scripts.midi_to_dtx import midi_to_dtx
-from scripts.platform_utils import get_folder_path
+from scripts.platform_utils import force_copy_file, get_audio_path, get_folder_path, safe_remove_file
 from scripts.separate_music import separate_music
 
 @debug_args
@@ -400,15 +400,6 @@ def reload_preview_gr(*args, project_path=None):
 
     return [base_output_log, output_log, input_path, output_path]
 
-def safe_remove_file(file_path):
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-@debug_args
-def force_copy_file(input_path, output_path):
-    safe_remove_file(output_path)
-    shutil.copyfile(input_path, output_path)
-
 @debug_args
 def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
     project_path = project_path or app_config.project_path
@@ -426,25 +417,12 @@ def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
     if not os.path.exists(input_path):
         raise Exception(f"BGMが見つかりません。 {input_path}")
 
-    # 全角文字が入ってるとコンバートに失敗するので作業ディレクトリに移動する
-    tmp_dir = get_tmp_dir()
-    tmp_input_path = get_tmp_file_path(os.path.splitext(input_path)[1])
-    force_copy_file(input_path, tmp_input_path)
-
-    # 一時出力先パス
-    basename_without_ext = os.path.splitext(os.path.basename(tmp_input_path))[0]
-    tmp_output_path = os.path.join(tmp_dir, model, basename_without_ext, "drums.wav")
-
     with lock if lock is not None else nullcontext():
-        separate_music(model, tmp_dir, tmp_input_path, jobs)
+        output_files = separate_music(model, input_path, project_path, jobs, drums_only=True)
 
     # 音声の変換
-    convert_audio(tmp_output_path, output_path, bitrate)
-
-    # 一時ファイルの削除
-    safe_remove_file(tmp_input_path)
-    shutil.rmtree(os.path.join(tmp_dir, model, basename_without_ext))
-    safe_remove_file(os.path.join(project_path, "drums.wav"))
+    convert_audio(output_files[0], output_path, bitrate)
+    safe_remove_file(output_files[0])
 
     bpm = compute_bpm(output_path)
     config.dtx_bpm = bpm
@@ -770,3 +748,50 @@ def reset_dtx_wav_gr(*args, project_path=None):
         config.lp_offset,
         config.lbd_offset,
     ]
+
+@debug_args
+def dev_select_separate_audio_gr(*args):
+    global dev_config
+    dev_config = DevConfig(*args)
+    dev_config.save(".")
+
+    initialdir = os.path.dirname(dev_config.separate_audio_file)
+    audio_file = get_audio_path(initialdir=initialdir)
+    if audio_file == '':
+        raise Exception("音声ファイルを選択してください")
+
+    dev_config.separate_audio_file = audio_file
+    dev_config.save(".")
+
+    output_log = f"音声ファイルを開きました。{audio_file}\n\n"
+
+    return [output_log, audio_file]
+
+@debug_args
+def dev_separate_audio_gr(*args):
+    global dev_config
+    dev_config = DevConfig(*args)
+    dev_config.save(".")
+
+    model = dev_config.separate_model
+    input_path = dev_config.separate_audio_file
+    output_dir = os.path.dirname(input_path)
+    jobs = dev_config.separate_jobs
+    bitrate = app_config.bgm_bitrate
+
+    if not os.path.exists(input_path):
+        raise Exception(f"BGMが見つかりません。 {input_path}")
+
+    output_files = separate_music(model, input_path, output_dir, jobs, drums_only=False)
+
+    # 音声の変換
+    converted_files = []
+    for output_file in output_files:
+        converted_path = output_file.replace(".wav", ".ogg")
+        convert_audio(output_file, converted_path, bitrate)
+        safe_remove_file(output_file)
+        converted_files.append(converted_path)
+
+    output_log = "音声の分離に成功しました。\n\n"
+
+    return [output_log, *converted_files]

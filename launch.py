@@ -1,7 +1,7 @@
 import gradio as gr
 
-from scripts.config_utils import ProjectConfig, app_config
-from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr
+from scripts.config_utils import ProjectConfig, app_config, dev_config
+from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr, dev_select_separate_audio_gr, dev_separate_audio_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
 
@@ -355,6 +355,29 @@ with gr.Blocks(title="TubeDTX") as demo:
             text += "Headerタブでヘッダー情報を編集できます\n"
             text += "Chipsタブでチップ音のファイル名、音量、開始時間を編集できます\n"
             gr.TextArea(text, show_label=False)
+        if dev_config.development:
+            with gr.TabItem("Develpment"):
+                with gr.Tabs():
+                    with gr.TabItem("Separate Audio"):
+                        with gr.Row():
+                            with gr.Column():
+                                add_space(1)
+                                with gr.Row():
+                                    dev_separate_button = gr.Button("Separate", variant="primary")
+                                with gr.Row():
+                                    with gr.Column(scale=5):
+                                        dev_separate_audio_path_textbox = gr.Textbox(label="Separate Audio Path", value=dev_config.separate_audio_file)
+                                    with gr.Column(scale=1, min_width=50):
+                                        dev_separate_audio_open_button = gr.Button("Open", variant="primary")
+                                dev_separate_model_dropdown = gr.Dropdown(demucs_models, value=dev_config.separate_model, label="Model")
+                                dev_separate_jobs_slider = gr.Slider(0, 32, value=dev_config.separate_jobs, step=1, label="Number of Jobs")
+                            with gr.Column():
+                                dev_checkbox = gr.Checkbox(value=dev_config.development, label="Development", visible=False)
+                                dev_separate_output = gr.Textbox(show_label=False)
+                                dev_separate_drums_audio = gr.Audio(label="Drums", source="upload", type="filepath")
+                                dev_separate_bass_audio = gr.Audio(label="Bass", source="upload", type="filepath")
+                                dev_separate_other_audio = gr.Audio(label="Other", source="upload", type="filepath")
+                                dev_separate_vocals_audio = gr.Audio(label="Vocals", source="upload", type="filepath")
 
     app_config_inputs = [
         project_path_textbox,
@@ -372,6 +395,14 @@ with gr.Blocks(title="TubeDTX") as demo:
         batch_skip_converted_checkbox,
         batch_jobs_slider,
     ]
+
+    if dev_config.development:
+        dev_config_inputs = [
+            dev_checkbox,
+            dev_separate_audio_path_textbox,
+            dev_separate_model_dropdown,
+            dev_separate_jobs_slider,
+        ]
 
     dtx_wav_inputs = [
         dtx_hhc_wav_textbox,
@@ -716,6 +747,24 @@ with gr.Blocks(title="TubeDTX") as demo:
                             dtx_output,
                             *dtx_wav_inputs,
                       ])
+
+    if dev_config.development:
+        dev_separate_audio_open_button.click(dev_select_separate_audio_gr,
+                                    inputs=dev_config_inputs,
+                                    outputs=[
+                                            dev_separate_output,
+                                            dev_separate_audio_path_textbox,
+                                    ])
+
+        dev_separate_button.click(dev_separate_audio_gr,
+                        inputs=dev_config_inputs,
+                        outputs=[
+                                dev_separate_output,
+                                dev_separate_drums_audio,
+                                dev_separate_bass_audio,
+                                dev_separate_other_audio,
+                                dev_separate_vocals_audio,
+                        ])
 
 if __name__ == "__main__":
     demo.launch()

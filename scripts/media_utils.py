@@ -5,41 +5,20 @@ import shutil
 import string
 import subprocess
 import time
-import mock
+import zipfile
 from moviepy.video.fx.crop import crop
 from moviepy.editor import AudioFileClip, AudioClip, VideoFileClip
 from moviepy.audio.fx.all import audio_fadein, audio_fadeout
 from moviepy.config import get_setting
 from typing import Tuple
+from pytube import YouTube
 
 from pytube.cipher import get_throttling_function_code
 import requests
 
+from bs4 import BeautifulSoup
+
 from scripts.debug_utils import debug_args
-
-def patched_throttling_plan(js: str):
-    """Patch throttling plan, from https://github.com/pytube/pytube/issues/1498"""
-    raw_code = get_throttling_function_code(js)
-
-    transform_start = r"try{"
-    plan_regex = re.compile(transform_start)
-    match = plan_regex.search(raw_code)
-
-    #transform_plan_raw = find_object_from_startpoint(raw_code, match.span()[1] - 1)
-    transform_plan_raw = js
-
-    # Steps are either c[x](c[y]) or c[x](c[y],c[z])
-    step_start = r"c\[(\d+)\]\(c\[(\d+)\](,c(\[(\d+)\]))?\)"
-    step_regex = re.compile(step_start)
-    matches = step_regex.findall(transform_plan_raw)
-    transform_steps = []
-    for match in matches:
-        if match[4] != '':
-            transform_steps.append((match[0],match[1],match[4]))
-        else:
-            transform_steps.append((match[0],match[1]))
-
-    return transform_steps
 
 def randomname(n):
    return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
@@ -62,36 +41,35 @@ def get_tmp_file_path(ext):
 
 @debug_args
 def get_video_info(url):
-    title = ""
-    thumbnail_url = ""
-    with mock.patch('pytube.cipher.get_throttling_plan', patched_throttling_plan):
-        from pytube import YouTube
-        yt = YouTube(url)
-        time.sleep(1) # 早すぎるとエラー起きやすい気がする
-        title = yt.title
-        thumbnail_url = yt.thumbnail_url
+    # YouTubeのページを取得
+    response = requests.get(url)
+
+    # BeautifulSoupオブジェクトを作成
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # ページタイトルを取得
+    title = soup.find('title').text
+
+    # " - YouTube"の部分を削除
+    title = title.replace(" - YouTube", "")
+
+    # サムネイル画像のURLを取得
+    thumbnail_url = soup.find("meta", property="og:image")["content"]
 
     return title, thumbnail_url
 
 @debug_args
 def download_video(url, output_path, thumbnail_path):
     output_dir, filename = os.path.split(output_path)
-
-    title = ""
-    artist = ""
-    full_title = ""
     duration = 0
-    thumbnail_url = ""
-    with mock.patch('pytube.cipher.get_throttling_plan', patched_throttling_plan):
-        from pytube import YouTube
-        yt = YouTube(url)
-        video = yt.streams.get_highest_resolution()
-        full_title = yt.title
-        title, artist = extract_title_and_artist(full_title)
-        if artist == "":
-            artist = yt.author
-        thumbnail_url = yt.thumbnail_url
-        video.download(output_path=output_dir, filename=filename)
+
+    yt = YouTube(url)
+    video = yt.streams.get_highest_resolution()
+    original_title, thumbnail_url = get_video_info(url)
+    title, artist = extract_title_and_artist(original_title)
+    if artist == "":
+        artist = yt.author
+    video.download(output_path=output_dir, filename=filename)
 
     print(f"Video download is complete. {output_path}")
 
@@ -107,7 +85,7 @@ def download_video(url, output_path, thumbnail_path):
 
     print(f"Thumbnail download is complete. {thumbnail_path}")
 
-    return full_title, title, artist, duration, video_size[0], video_size[1]
+    return original_title, title, artist, duration, video_size[0], video_size[1]
 
 @debug_args
 def trim_and_crop_video(input_path, output_path, start_time, end_time, width, height, bitrate):

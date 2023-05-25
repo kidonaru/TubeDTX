@@ -1,0 +1,3 @@
+[submodule "pytube"]
+	path = pytube
+	url = https://github.com/kidonaru/pytube.git
