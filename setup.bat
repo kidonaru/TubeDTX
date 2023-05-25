@@ -9,9 +9,9 @@ call venv\Scripts\activate.bat
 
 pip install --upgrade -r requirements.txt
 
-cd pytube
+cd modules/pytube
 pip install -e .
-cd ..
+cd ../..
 
 pip list
 
