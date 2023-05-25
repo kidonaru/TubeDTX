@@ -4,3 +4,6 @@
 [submodule "modules/magenta"]
 	path = modules/magenta
 	url = https://github.com/kidonaru/magenta.git
+[submodule "modules/pyfluidsynth"]
+	path = modules/pyfluidsynth
+	url = https://github.com/kidonaru/pyfluidsynth.git

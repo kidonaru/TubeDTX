@@ -17,6 +17,10 @@ cd modules/magenta
 pip install -e . --no-dependencies
 cd ../..
 
+cd modules/pyfluidsynth
+pip install -e .
+cd ../..
+
 pip list
 
 if not "%skip_key_wait%"=="true" (
