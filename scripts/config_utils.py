@@ -59,6 +59,7 @@ class JsonConfig:
             json.dump(asdict(self), f, indent=2)
 
 cpu_count = multiprocessing.cpu_count()
+default_midi_convert_model = "legacy" if os.name == 'posix' else "e-gmd"
 
 @dataclass
 class ProjectConfig(JsonConfig):
@@ -84,7 +85,7 @@ class ProjectConfig(JsonConfig):
     separate_jobs: int = cpu_count
 
     midi_input_name2: str = "drums.ogg"
-    midi_convert_model: str = "e-gmd"
+    midi_convert_model: str = default_midi_convert_model
     midi_resolution: int = 8
     midi_threshold: float = 0.2
     midi_segmentation: float = 0.9

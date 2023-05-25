@@ -79,7 +79,7 @@ def convert_to_midi_drums(
         convert_model,
         config: ProjectConfig):
 
-    if convert_model != "original":
+    if convert_model != "legacy":
         convert_to_midi_with_onsets_frames(
             output_path,
             input_path,
