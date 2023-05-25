@@ -4,7 +4,9 @@ __pycache__
 venv
 flagged
 config.json
+dev_config.json
 bgm.ogg
 resources/chips
 resources/tube_dtx_config.json
-
+pytube
+tmp

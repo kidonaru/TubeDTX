@@ -8,7 +8,7 @@ import traceback
 import gradio as gr
 import requests
 
-from scripts.config_utils import AppConfig, ProjectConfig, app_config
+from scripts.config_utils import AppConfig, ProjectConfig, DevConfig, app_config, dev_config
 from scripts.debug_utils import debug_args
 from scripts.media_utils import convert_audio, create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
@@ -750,43 +750,39 @@ def reset_dtx_wav_gr(*args, project_path=None):
     ]
 
 @debug_args
-def utils_select_separate_audio_gr(*args):
-    global app_config
-    app_config = AppConfig(*args)
-    app_config.save(".")
+def dev_select_separate_audio_gr(*args):
+    global dev_config
+    dev_config = DevConfig(*args)
+    dev_config.save(".")
 
-    initialdir = os.path.dirname(app_config.utils_separate_audio_file)
+    initialdir = os.path.dirname(dev_config.separate_audio_file)
     audio_file = get_audio_path(initialdir=initialdir)
     if audio_file == '':
         raise Exception("音声ファイルを選択してください")
 
-    app_config.utils_separate_audio_file = audio_file
-    app_config.save(".")
+    dev_config.separate_audio_file = audio_file
+    dev_config.save(".")
 
     output_log = f"音声ファイルを開きました。{audio_file}\n\n"
 
     return [output_log, audio_file]
 
 @debug_args
-def utils_separate_audio_gr(*args, project_path=None, lock: mp.Lock=None):
-    global app_config
-    app_config = AppConfig(*args)
-    app_config.save(".")
+def dev_separate_audio_gr(*args):
+    global dev_config
+    dev_config = DevConfig(*args)
+    dev_config.save(".")
 
-    project_path = project_path or app_config.project_path
-    config = ProjectConfig.load(project_path)
-
-    model = config.separate_model
-    input_path = app_config.utils_separate_audio_file
+    model = dev_config.separate_model
+    input_path = dev_config.separate_audio_file
     output_dir = os.path.dirname(input_path)
-    jobs = config.separate_jobs
+    jobs = dev_config.separate_jobs
     bitrate = app_config.bgm_bitrate
 
     if not os.path.exists(input_path):
         raise Exception(f"BGMが見つかりません。 {input_path}")
 
-    with lock if lock is not None else nullcontext():
-        output_files = separate_music(model, input_path, output_dir, jobs, drums_only=False)
+    output_files = separate_music(model, input_path, output_dir, jobs, drums_only=False)
 
     # 音声の変換
     converted_files = []

@@ -300,8 +300,6 @@ class AppConfig(JsonConfig):
     batch_skip_converted: bool = True
     batch_jobs: int = 1
 
-    utils_separate_audio_file: str = ""
-
     def get_project_paths(self):
         if not os.path.isdir(self.workspace_path):
             return []
@@ -341,3 +339,18 @@ class AppConfig(JsonConfig):
         return gallery
 
 app_config = AppConfig.load(".")
+
+@dataclass
+class DevConfig(JsonConfig):
+    development: bool = False
+
+    separate_audio_file: str = ""
+    separate_model: str = "htdemucs"
+    separate_jobs: int = cpu_count
+
+    @classmethod
+    def get_config_name(cls):
+        return "dev_config.json"
+
+dev_config = DevConfig.load(".")
+dev_config.save(".")
