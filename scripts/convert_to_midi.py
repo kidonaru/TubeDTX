@@ -12,7 +12,7 @@ from scripts.debug_utils import debug_args
 hh_note = 42
 sn_note = 38
 bd_note = 36
-ht_note = 50
+ht_note = 48
 lt_note = 45
 ft_note = 41
 cy_note = 49
