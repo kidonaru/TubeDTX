@@ -11,9 +11,9 @@ source ./venv/bin/activate
 
 pip3 install --upgrade -r requirements.txt
 
-cd pytube
+cd modules/pytube
 pip3 install -e .
-cd ..
+cd ../..
 
 pip3 list
 
