@@ -13,9 +13,9 @@ cd modules/pytube
 pip install -e .
 cd ../..
 
-cd magenta
+cd modules/magenta
 pip install -e . --no-dependencies
-cd ..
+cd ../..
 
 pip list
 

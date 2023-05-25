@@ -15,9 +15,9 @@ cd modules/pytube
 pip3 install -e .
 cd ../..
 
-cd magenta
+cd modules/magenta
 pip3 install -e . --no-dependencies
-cd ..
+cd ../..
 
 pip3 list
 
