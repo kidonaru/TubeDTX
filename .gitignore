@@ -10,3 +10,4 @@ resources/chips
 resources/tube_dtx_config.json
 tmp
 checkpoints
+.locel_version

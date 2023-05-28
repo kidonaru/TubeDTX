@@ -25,6 +25,8 @@ cd ../..
 
 pip3 list
 
+cat VERSION > .locel_version
+
 if [ "$skip_key_wait" != "true" ]; then
   read -p "All complate!!! plass any key..."
 fi

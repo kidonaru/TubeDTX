@@ -23,6 +23,8 @@ cd ../..
 
 pip list
 
+type VERSION > .locel_version
+
 if not "%skip_key_wait%"=="true" (
   echo "All complate!!! plass any key..."
   pause

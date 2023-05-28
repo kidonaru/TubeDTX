@@ -708,7 +708,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                       ])
 
     midi_convert_test_button.click(convert_test_to_midi_gr,
-                      inputs=inputs,
+                      inputs=[
+                            *app_config_inputs,
+                            *inputs,
+                      ],
                       outputs=[
                             base_output,
                             midi_output,
