@@ -3,7 +3,7 @@ import numpy as np
 from scripts.config_utils import ProjectConfig
 from scripts.debug_utils import debug_args
 from scripts.media_utils import convert_audio, download_and_extract, get_tmp_dir
-from scripts.convert_to_midi import adjust_offset, get_onsets, hh_note, sn_note, bd_note, ht_note, lt_note, ft_note, cy_note, hho_note, ride_note, lc_note, lp_note, lbd_note
+from scripts.convert_to_midi import adjust_offset, get_onsets, hh_note, normalize_notes, sn_note, bd_note, ht_note, lt_note, ft_note, cy_note, hho_note, ride_note, lc_note, lp_note, lbd_note
 import os
 
 import tensorflow._api.v2.compat.v1 as tf
@@ -30,6 +30,7 @@ def convert_to_midi_with_onsets_frames(
         adjust_offset_count,
         adjust_offset_min,
         adjust_offset_max,
+        velocity_max_percentile,
         convert_model,
         config: ProjectConfig):
     checkpoint_url = f"https://storage.googleapis.com/magentadata/models/onsets_frames_transcription/{convert_model}_checkpoint.zip"
@@ -137,6 +138,9 @@ def convert_to_midi_with_onsets_frames(
     # MIDIファイルのロード
     midi_input = pretty_midi.PrettyMIDI(output_path)
 
+    # 音量ノーマライズ
+    normalize_notes(track, velocity_max_percentile)
+
     note_volumes = {
         sn_note: config.e_gmd_sn_volume,
         bd_note: config.e_gmd_bd_volume,
@@ -151,8 +155,7 @@ def convert_to_midi_with_onsets_frames(
         for note in instrument.notes:
             note: pretty_midi.Note = note
             volume = note_volumes.get(note.pitch, 0)
-            if volume != 0:
-                note.velocity = int(note.velocity * volume / 100)
+            note.velocity = int(note.velocity * volume / 100)
 
             if note.velocity != 0:
                 note.start_frame = int(note.start / frame_time)

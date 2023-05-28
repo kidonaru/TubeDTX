@@ -475,6 +475,7 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
             adjust_offset_count,
             adjust_offset_min,
             adjust_offset_max,
+            velocity_max_percentile,
             convert_model,
             config
         )
@@ -491,6 +492,54 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
         convert_to_midi_drums(
             output_path,
             input_path,
+            None,
+            offset,
+            duration,
+            bpm,
+            resolution,
+            threshold,
+            segmentation,
+            hop_length,
+            onset_delta,
+            disable_hh_frame,
+            adjust_offset_count,
+            adjust_offset_min,
+            adjust_offset_max,
+            velocity_max_percentile,
+            config)
+
+        output_log = "MIDIへの変換に成功しました。\n"
+        output_log += '"5. Convert to DTX"タブに進んでください。\n\n'
+        output_log += f"output_path: {output_path}\n\n"
+    
+    elif convert_model == "mixed" and not is_test:
+        output_path = os.path.splitext(input_path)[0] + ".mid"
+        convert_model = "e-gmd"
+        e_gmd_output_path = os.path.splitext(input_path)[0] + f".{convert_model}.mid"
+        offset = 0
+        duration = None
+
+        convert_to_midi_with_onsets_frames(
+            e_gmd_output_path,
+            input_path,
+            offset,
+            duration,
+            bpm,
+            resolution,
+            hop_length,
+            onset_delta,
+            adjust_offset_count,
+            adjust_offset_min,
+            adjust_offset_max,
+            velocity_max_percentile,
+            convert_model,
+            config
+        )
+
+        convert_to_midi_drums(
+            output_path,
+            input_path,
+            e_gmd_output_path,
             offset,
             duration,
             bpm,
@@ -520,6 +569,7 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
         convert_to_midi_drums(
             test_midi_path,
             input_path,
+            None,
             offset,
             duration,
             bpm,

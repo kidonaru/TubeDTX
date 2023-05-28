@@ -105,6 +105,7 @@ def adjust_offset(track, onsets, frame_time, adjust_offset_count, adjust_offset_
                 note.start += offset_time
                 note.end += offset_time
 
+@debug_args
 def get_onsets(input_path, offset, duration, hop_length, onset_delta):
     # 音声ファイルの読み込みと解析
     y, sr = librosa.load(input_path, offset=offset, duration=duration)
@@ -123,9 +124,31 @@ def get_onsets(input_path, offset, duration, hop_length, onset_delta):
     return onsets, onset_env, C, sr, frame_time
 
 @debug_args
+def normalize_notes(track, velocity_max_percentile):
+    velocities_map: dict[int, list[float]] = {}
+
+    for note in track.notes:
+        note: pretty_midi.Note = note
+        if note.pitch not in velocities_map:
+            velocities_map[note.pitch] = []
+        velocities_map[note.pitch].append(note.velocity)
+
+    # パーセンタイルで音量最大値を設定
+    max_velocities = {}
+    for pitch, velocities in velocities_map.items():
+        max_velocities[pitch] = np.percentile(velocities, velocity_max_percentile)
+
+    # チャンネルごとにノーマライズ
+    for note in track.notes:
+        note: pretty_midi.Note = note
+        max_velocity = max_velocities.get(note.pitch, 0)
+        note.velocity = _clamp(int(note.velocity / max_velocity * 127), 0, 127)
+
+@debug_args
 def convert_to_midi_drums(
         output_path,
         input_path,
+        base_midi_path,
         offset,
         duration,
         bpm,
@@ -156,7 +179,6 @@ def convert_to_midi_drums(
     peak_powers = {}
     prev_drums_frame_data = {}
 
-    velocities_map: dict[int, list[float]] = {}
     disable_hh_frames = set()
 
     for t, frame in enumerate(C.T):
@@ -221,15 +243,14 @@ def convert_to_midi_drums(
                 note.start_frame = start_frame
                 track.notes.append(note)
 
-                if pitch not in velocities_map:
-                    velocities_map[pitch] = []
-                velocities_map[pitch].append(velocity)
-
-                onset = get_onset_nearest(onsets, start_frame, -disable_hh_frame, disable_hh_frame)
-                if onset is not None:
-                    disable_hh_frames.add(onset)
-
         prev_drums_frame_data = drums_frame_data
+
+    # ハイハット無効フレームの取得
+    for note in track.notes:
+        note: pretty_midi.Note = note
+        onset = get_onset_nearest(onsets, note.start_frame, -disable_hh_frame, disable_hh_frame)
+        if onset is not None:
+            disable_hh_frames.add(onset)
 
     # offsetの調整
     adjust_offset(track, onsets, frame_time, adjust_offset_count, adjust_offset_min, adjust_offset_max)
@@ -246,23 +267,16 @@ def convert_to_midi_drums(
             note = pretty_midi.Note(velocity=velocity, pitch=pitch, start=start, end=end)
             track.notes.append(note)
 
-            if pitch not in velocities_map:
-                velocities_map[pitch] = []
-            velocities_map[pitch].append(velocity)
-
-    # パーセンタイルで音量最大値を設定
-    max_velocities = {}
-    for pitch, velocities in velocities_map.items():
-        max_velocities[pitch] = np.percentile(velocities, velocity_max_percentile)
-
-    # チャンネルごとにノーマライズ
-    for note in track.notes:
-        note: pretty_midi.Note = note
-        max_velocity = max_velocities.get(note.pitch, 0)
-        note.velocity = _clamp(int(note.velocity / max_velocity * 127), 0, 127)
+    # 音量ノーマライズ
+    normalize_notes(track, velocity_max_percentile)
 
     # トラックをMIDIデータに追加
     midi_data.instruments.append(track)
+
+    # ベースMIDIファイルのtrackを追加
+    if base_midi_path is not None:
+        base_midi = pretty_midi.PrettyMIDI(base_midi_path)
+        midi_data.instruments.append(base_midi.instruments[0])
 
     # MIDIファイルの保存
     midi_data.write(output_path)
