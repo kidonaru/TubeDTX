@@ -1,6 +1,9 @@
+import librosa
+import numpy as np
 from scripts.config_utils import ProjectConfig
 from scripts.debug_utils import debug_args
 from scripts.media_utils import convert_audio, download_and_extract, get_tmp_dir
+from scripts.convert_to_midi import adjust_offset, get_onsets, hh_note, sn_note, bd_note, ht_note, lt_note, ft_note, cy_note, hho_note, ride_note, lc_note, lp_note, lbd_note
 import os
 
 import tensorflow._api.v2.compat.v1 as tf
@@ -12,6 +15,8 @@ from magenta.models.onsets_frames_transcription import train_util
 import note_seq
 from note_seq import midi_io
 
+import pretty_midi
+
 @debug_args
 def convert_to_midi_with_onsets_frames(
         output_path,
@@ -20,6 +25,11 @@ def convert_to_midi_with_onsets_frames(
         duration,
         bpm,
         resolution,
+        hop_length,
+        onset_delta,
+        adjust_offset_count,
+        adjust_offset_min,
+        adjust_offset_max,
         convert_model,
         config: ProjectConfig):
     checkpoint_url = f"https://storage.googleapis.com/magentadata/models/onsets_frames_transcription/{convert_model}_checkpoint.zip"
@@ -31,8 +41,8 @@ def convert_to_midi_with_onsets_frames(
     if not os.path.exists(checkpoint_dir):
         download_and_extract(checkpoint_url, checkpoint_dir)
 
-    config = configs.CONFIG_MAP['drums']
-    hparams = config.hparams
+    drums_config = configs.CONFIG_MAP['drums']
+    hparams = drums_config.hparams
     hparams.batch_size = 1
 
     examples = tf.placeholder(tf.string, [None])
@@ -46,7 +56,7 @@ def convert_to_midi_with_onsets_frames(
         skip_n_initial_records=0)
     
     estimator = train_util.create_estimator(
-    config.model_fn, checkpoint_dir, hparams)
+    drums_config.model_fn, checkpoint_dir, hparams)
 
     iterator = tf.data.make_initializable_iterator(dataset)
     next_record = iterator.get_next()
@@ -114,5 +124,45 @@ def convert_to_midi_with_onsets_frames(
                     colab_ephemeral=False)
 
     midi_io.sequence_proto_to_midi_file(sequence_prediction, output_path)
+
+    # onsetsの取得
+    onsets, onset_env, C, sr, frame_time = get_onsets(input_path, offset, duration, hop_length, onset_delta)
+
+    # MIDIファイルの作成
+    midi_output = pretty_midi.PrettyMIDI(resolution=bpm * resolution, initial_tempo=bpm)
+
+    # トラックを作成
+    track = pretty_midi.Instrument(program=0, is_drum=True)
+
+    # MIDIファイルのロード
+    midi_input = pretty_midi.PrettyMIDI(output_path)
+
+    note_volumes = {
+        sn_note: config.e_gmd_sn_volume,
+        bd_note: config.e_gmd_bd_volume,
+        ht_note: config.e_gmd_ht_volume,
+        hho_note: config.e_gmd_hho_volume,
+        ride_note: config.e_gmd_ride_volume,
+    }
+
+    # 音量補正
+    track = pretty_midi.Instrument(program=0, is_drum=True)
+    for instrument in midi_input.instruments:
+        for note in instrument.notes:
+            note: pretty_midi.Note = note
+            volume = note_volumes.get(note.pitch, 0)
+            if volume != 0:
+                note.velocity = int(note.velocity * volume / 100)
+
+            if note.velocity != 0:
+                note.start_frame = int(note.start / frame_time)
+                track.notes.append(note)
+
+    # offsetの調整
+    adjust_offset(track, onsets, frame_time, adjust_offset_count, adjust_offset_min, adjust_offset_max)
+
+    # MIDIファイルの書き込み
+    midi_output.instruments.append(track)
+    midi_output.write(output_path)
 
     print(f"MIDI convert is complete. {output_path}")

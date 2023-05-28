@@ -4,7 +4,7 @@ from scripts.config_utils import ProjectConfig, app_config, dev_config
 from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr, dev_select_separate_audio_gr, dev_separate_audio_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
-midi_models = ["legacy", "e-gmd"]
+midi_models = ["original", "e-gmd"]
 
 config = ProjectConfig.load(app_config.project_path)
 
@@ -212,6 +212,16 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 midi_ft_min_slider = gr.Slider(0, 127, step=1, value=config.ft_min, label="FloorTom Min")
                                 midi_ft_range_slider = gr.Slider(0, 127, step=1, value=config.ft_range, label="FloorTom Range")
                             midi_reset_pitch_button = gr.Button("Reset").style(full_width=False, size='sm')
+                        with gr.TabItem("e-gmd"):
+                            with gr.Row():
+                                e_gmd_sn_volume_slider = gr.Slider(0, 100, step=1, value=config.e_gmd_sn_volume, label="Snare Volume")
+                                e_gmd_bd_volume_slider = gr.Slider(0, 100, step=1, value=config.e_gmd_bd_volume, label="BD Volume")
+                            with gr.Row():
+                                e_gmd_ht_volume_slider = gr.Slider(0, 100, step=1, value=config.e_gmd_ht_volume, label="HiHat Volume")
+                                e_gmd_hho_volume_slider = gr.Slider(0, 100, step=1, value=config.e_gmd_hho_volume, label="HiHatOpen Volume")
+                            with gr.Row():
+                                e_gmd_ride_volume_slider = gr.Slider(0, 100, step=1, value=config.e_gmd_ride_volume, label="RideCymbal Volume")
+                            e_gmd_reset_button = gr.Button("Reset").style(full_width=False, size='sm')
                 with gr.Column():
                     midi_output = gr.Textbox(show_label=False)
                     midi_output_image = gr.Image(show_label=False)
@@ -508,6 +518,12 @@ with gr.Blocks(title="TubeDTX") as demo:
         midi_ht_range_slider,
         midi_lt_range_slider,
         midi_ft_range_slider,
+
+        e_gmd_sn_volume_slider,
+        e_gmd_bd_volume_slider,
+        e_gmd_ht_volume_slider,
+        e_gmd_hho_volume_slider,
+        e_gmd_ride_volume_slider,
 
         dtx_input_name_textbox,
         dtx_output_name_textbox,

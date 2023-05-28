@@ -9,6 +9,7 @@ import gradio as gr
 import requests
 
 from scripts.config_utils import AppConfig, ProjectConfig, DevConfig, app_config, dev_config
+from scripts.convert_to_midi_with_onsets_frames import convert_to_midi_with_onsets_frames
 from scripts.debug_utils import debug_args
 from scripts.media_utils import convert_audio, create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
@@ -457,7 +458,32 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
     input_path = os.path.join(project_path, input_file_name)
     test_image_path = None
 
-    if not is_test:
+    if convert_model == "e-gmd" and not is_test:
+        output_path = os.path.splitext(input_path)[0] + ".mid"
+        offset = 0
+        duration = None
+
+        convert_to_midi_with_onsets_frames(
+            output_path,
+            input_path,
+            offset,
+            duration,
+            bpm,
+            resolution,
+            hop_length,
+            onset_delta,
+            adjust_offset_count,
+            adjust_offset_min,
+            adjust_offset_max,
+            convert_model,
+            config
+        )
+
+        output_log = "MIDIへの変換に成功しました。\n"
+        output_log += '"5. Convert to DTX"タブに進んでください。\n\n'
+        output_log += f"output_path: {output_path}\n\n"
+
+    elif convert_model == "original" and not is_test:
         output_path = os.path.splitext(input_path)[0] + ".mid"
         offset = 0
         duration = None
@@ -478,7 +504,6 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
             adjust_offset_min,
             adjust_offset_max,
             velocity_max_percentile,
-            convert_model,
             config)
 
         output_log = "MIDIへの変換に成功しました。\n"
@@ -508,7 +533,6 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
             adjust_offset_min,
             adjust_offset_max,
             velocity_max_percentile,
-            convert_model,
             config)
 
         convert_to_midi_peak(

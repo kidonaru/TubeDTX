@@ -59,7 +59,7 @@ class JsonConfig:
             json.dump(asdict(self), f, indent=2)
 
 cpu_count = multiprocessing.cpu_count()
-default_midi_convert_model = "legacy" if os.name == 'posix' else "e-gmd"
+default_midi_convert_model = "original" if os.name == 'posix' else "e-gmd"
 
 @dataclass
 class ProjectConfig(JsonConfig):
@@ -110,6 +110,12 @@ class ProjectConfig(JsonConfig):
     ht_range: int = 4
     lt_range: int = 4
     ft_range: int = 0
+
+    e_gmd_sn_volume: int = 0
+    e_gmd_bd_volume: int = 0
+    e_gmd_ht_volume: int = 0
+    e_gmd_hho_volume: int = 100
+    e_gmd_ride_volume: int = 100
 
     dtx_input_name: str = "drums.mid"
     dtx_output_name: str = "score.dtx"
