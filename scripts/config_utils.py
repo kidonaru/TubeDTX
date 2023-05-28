@@ -296,6 +296,8 @@ class AppConfig(JsonConfig):
     workspace_path: str = ""
     auto_save: bool = True
     bgm_bitrate: str = "192k"
+    thumbnail_width: int = 640
+    thumbnail_height: int = 480
 
     separate_model: str = "htdemucs"
     separate_jobs: int = cpu_count

@@ -44,7 +44,8 @@ def resize_image(input_image_path, output_image_path, size):
     aspect_ratio = width / height
     
     # ターゲットのサイズとアスペクト比を設定
-    target_width, target_height = size
+    target_width = int(size[0])
+    target_height = int(size[1])
     target_ratio = target_width / target_height
 
     if aspect_ratio > target_ratio:
@@ -64,7 +65,7 @@ def resize_image(input_image_path, output_image_path, size):
     new_image.paste(resized_image, ((target_width - new_width) // 2, (target_height - new_height) // 2))
 
     # 画像を保存
-    new_image.save(output_image_path)
+    new_image.save(output_image_path, quality = 85)
 
 @debug_args
 def get_video_info(url):
@@ -86,7 +87,7 @@ def get_video_info(url):
     return title, thumbnail_url
 
 @debug_args
-def download_video(url, output_path, thumbnail_path):
+def download_video(url, output_path, thumbnail_path, thumbnail_size):
     output_dir, filename = os.path.split(output_path)
     duration = 0
 
@@ -110,7 +111,7 @@ def download_video(url, output_path, thumbnail_path):
     with open(thumbnail_path, "wb") as file:
         file.write(response.content)
 
-    resize_image(thumbnail_path, thumbnail_path, (640, 480))
+    resize_image(thumbnail_path, thumbnail_path, thumbnail_size)
 
     print(f"Thumbnail download is complete. {thumbnail_path}")
 
