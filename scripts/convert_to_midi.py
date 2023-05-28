@@ -276,7 +276,8 @@ def convert_to_midi_drums(
     # ベースMIDIファイルのtrackを追加
     if base_midi_path is not None:
         base_midi = pretty_midi.PrettyMIDI(base_midi_path)
-        midi_data.instruments.append(base_midi.instruments[0])
+        if len(base_midi.instruments) > 0:
+            midi_data.instruments.append(base_midi.instruments[0])
 
     # MIDIファイルの保存
     midi_data.write(output_path)

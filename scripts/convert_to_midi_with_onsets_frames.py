@@ -132,14 +132,17 @@ def convert_to_midi_with_onsets_frames(
     # MIDIファイルの作成
     midi_output = pretty_midi.PrettyMIDI(resolution=bpm * resolution, initial_tempo=bpm)
 
-    # トラックを作成
-    track = pretty_midi.Instrument(program=0, is_drum=True)
-
     # MIDIファイルのロード
     midi_input = pretty_midi.PrettyMIDI(output_path)
 
+    # ドラムトラックの読み込み
+    track_input = pretty_midi.Instrument(program=0, is_drum=True)
+    for instrument in midi_input.instruments:
+        for note in instrument.notes:
+            track_input.notes.append(note)
+
     # 音量ノーマライズ
-    normalize_notes(track, velocity_max_percentile)
+    normalize_notes(track_input, velocity_max_percentile)
 
     note_volumes = {
         sn_note: config.e_gmd_sn_volume,
@@ -150,22 +153,21 @@ def convert_to_midi_with_onsets_frames(
     }
 
     # 音量補正
-    track = pretty_midi.Instrument(program=0, is_drum=True)
-    for instrument in midi_input.instruments:
-        for note in instrument.notes:
-            note: pretty_midi.Note = note
-            volume = note_volumes.get(note.pitch, 0)
-            note.velocity = int(note.velocity * volume / 100)
+    track_output = pretty_midi.Instrument(program=0, is_drum=True)
+    for note in track_input.notes:
+        note: pretty_midi.Note = note
+        volume = note_volumes.get(note.pitch, 0)
+        note.velocity = int(note.velocity * volume / 100)
 
-            if note.velocity != 0:
-                note.start_frame = int(note.start / frame_time)
-                track.notes.append(note)
+        if note.velocity > 0:
+            note.start_frame = int(note.start / frame_time)
+            track_output.notes.append(note)
 
     # offsetの調整
-    adjust_offset(track, onsets, frame_time, adjust_offset_count, adjust_offset_min, adjust_offset_max)
+    #adjust_offset(track_output, onsets, frame_time, adjust_offset_count, adjust_offset_min, adjust_offset_max)
 
     # MIDIファイルの書き込み
-    midi_output.instruments.append(track)
+    midi_output.instruments.append(track_output)
     midi_output.write(output_path)
 
     print(f"MIDI convert is complete. {output_path}")
