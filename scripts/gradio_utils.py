@@ -158,14 +158,14 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
 
         if app_config.batch_separate_music:
             if not check_converted("drums.wav"):
-                outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path, lock=lock)
+                outputs = separate_music_gr(*app_config.to_dict().values(), *config.to_dict().values(), project_path=project_path, lock=lock)
                 config = ProjectConfig.load(project_path)
                 base_output_log = outputs[0]
                 output_log += outputs[1]
 
         if app_config.batch_convert_to_midi:
             if not check_converted("drums.mid"):
-                outputs = convert_to_midi_gr(*config.to_dict().values(), project_path=project_path)
+                outputs = convert_to_midi_gr(*app_config.to_dict().values(), *config.to_dict().values(), project_path=project_path)
                 config = ProjectConfig.load(project_path)
                 base_output_log = outputs[0]
                 output_log += outputs[1]
@@ -403,13 +403,17 @@ def reload_preview_gr(*args, project_path=None):
 
 @debug_args
 def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
-    project_path = project_path or app_config.project_path
-    config = ProjectConfig(*args)
+    global app_config
+    app_config = AppConfig(*(args[:AppConfig.get_parameters_size()]))
+    app_config.save(".")
 
-    model = config.separate_model
+    project_path = project_path or app_config.project_path
+    config = ProjectConfig(*(args[AppConfig.get_parameters_size():]))
+
+    model = app_config.separate_model
+    jobs = app_config.separate_jobs
     input_file = config.bgm_name
     output_file = config.midi_input_name2
-    jobs = config.separate_jobs
     bitrate = app_config.bgm_bitrate
 
     input_path = os.path.join(project_path, input_file)
@@ -438,8 +442,12 @@ def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
 
 @debug_args
 def _convert_to_midi_gr(*args, project_path=None, is_test=False):
+    global app_config
+    app_config = AppConfig(*(args[:AppConfig.get_parameters_size()]))
+    app_config.save(".")
+
     project_path = project_path or app_config.project_path
-    config = ProjectConfig(*args)
+    config = ProjectConfig(*(args[AppConfig.get_parameters_size():]))
 
     input_file_name = config.midi_input_name2
     resolution = config.midi_resolution
@@ -453,7 +461,7 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
     adjust_offset_max = config.midi_adjust_offset_max
     velocity_max_percentile = config.midi_velocity_max_percentile
     bpm = config.dtx_bpm
-    convert_model = config.midi_convert_model
+    convert_model = app_config.midi_convert_model
 
     input_path = os.path.join(project_path, input_file_name)
     test_image_path = None

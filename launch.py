@@ -152,8 +152,8 @@ with gr.Blocks(title="TubeDTX") as demo:
                 with gr.Column():
                     add_space(1)
                     separate_button = gr.Button("Separate", variant="primary")
-                    separate_model_dropdown = gr.Dropdown(demucs_models, value=config.separate_model, label="Model")
-                    separate_jobs_slider = gr.Slider(0, 32, value=config.separate_jobs, step=1, label="Number of Jobs")
+                    separate_model_dropdown = gr.Dropdown(demucs_models, value=app_config.separate_model, label="Model")
+                    separate_jobs_slider = gr.Slider(0, 32, value=app_config.separate_jobs, step=1, label="Number of Jobs")
                 with gr.Column():
                     separate_output = gr.Textbox(show_label=False)
                     separate_output_audio = gr.Audio(label="Result", source="upload", type="filepath")
@@ -176,7 +176,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                     with gr.Tabs():
                         with gr.TabItem("Base"):
                             midi_input_name_textbox = gr.Textbox(label="Input File Name", value=config.midi_input_name2)
-                            midi_convert_model_dropdown = gr.Dropdown(midi_models, value=config.midi_convert_model, label="Model")
+                            midi_convert_model_dropdown = gr.Dropdown(midi_models, value=app_config.midi_convert_model, label="Model")
                             midi_resolution_slider = gr.Slider(0, 16, step=1, value=config.midi_resolution, label="Resolution")
                             with gr.Row():
                                 midi_threshold_slider = gr.Slider(0, 1, value=config.midi_threshold, label="Threshold")
@@ -397,6 +397,10 @@ with gr.Blocks(title="TubeDTX") as demo:
         auto_save_checkbox,
         bgm_bitrate_textbox,
 
+        separate_model_dropdown,
+        separate_jobs_slider,
+        midi_convert_model_dropdown,
+
         batch_download_movie_checkbox,
         batch_convert_movie_checkbox,
         batch_create_preview_checkbox,
@@ -489,11 +493,7 @@ with gr.Blocks(title="TubeDTX") as demo:
         preview_fade_in_duration_slider,
         preview_fade_out_duration_slider,
 
-        separate_model_dropdown,
-        separate_jobs_slider,
-
         midi_input_name_textbox,
-        midi_convert_model_dropdown,
         midi_resolution_slider,
         midi_threshold_slider,
         midi_segmentation_slider,
@@ -685,7 +685,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                       ])
 
     separate_button.click(separate_music_gr,
-                          inputs=inputs,
+                          inputs=[
+                              *app_config_inputs,
+                              *inputs,
+                          ],
                           outputs=[
                                 base_output,
                                 separate_output,
@@ -694,7 +697,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                           ])
 
     midi_convert_button.click(convert_to_midi_gr,
-                      inputs=inputs,
+                      inputs=[
+                            *app_config_inputs,
+                            *inputs,
+                      ],
                       outputs=[
                             base_output,
                             midi_output,

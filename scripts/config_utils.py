@@ -40,6 +40,10 @@ class JsonConfig:
         })
 
     @classmethod
+    def get_parameters_size(cls):
+        return len(inspect.signature(cls).parameters)
+
+    @classmethod
     def load(cls, config_dir):
         config_path = cls.get_config_path(config_dir)
         if not os.path.exists(config_path):
@@ -59,7 +63,6 @@ class JsonConfig:
             json.dump(asdict(self), f, indent=2)
 
 cpu_count = multiprocessing.cpu_count()
-default_midi_convert_model = "original" if os.name == 'posix' else "e-gmd"
 
 @dataclass
 class ProjectConfig(JsonConfig):
@@ -81,11 +84,7 @@ class ProjectConfig(JsonConfig):
     preview_fade_in_duration: float = 1.0
     preview_fade_out_duration: float = 5.0
 
-    separate_model: str = "htdemucs"
-    separate_jobs: int = cpu_count
-
     midi_input_name2: str = "drums.ogg"
-    midi_convert_model: str = default_midi_convert_model
     midi_resolution: int = 8
     midi_threshold: float = 0.2
     midi_segmentation: float = 0.9
@@ -297,6 +296,10 @@ class AppConfig(JsonConfig):
     workspace_path: str = ""
     auto_save: bool = True
     bgm_bitrate: str = "192k"
+
+    separate_model: str = "htdemucs"
+    separate_jobs: int = cpu_count
+    midi_convert_model: str = "original"
 
     batch_download_movie: bool = True
     batch_convert_movie: bool = True
