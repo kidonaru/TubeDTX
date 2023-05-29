@@ -11,7 +11,7 @@ import requests
 from scripts.config_utils import AppConfig, ProjectConfig, DevConfig, app_config, dev_config
 from scripts.convert_to_midi_with_onsets_frames import convert_to_midi_with_onsets_frames
 from scripts.debug_utils import debug_args
-from scripts.media_utils import convert_audio, create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, trim_and_crop_video
+from scripts.media_utils import convert_audio, create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, resize_image, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
 from scripts.convert_to_midi import convert_to_midi_cqt, convert_to_midi_drums, convert_to_midi_peak, output_test_image
 from scripts.midi_to_dtx import midi_to_dtx
@@ -104,6 +104,11 @@ def new_score_gr(url: str):
     response = requests.get(thumbnail_url)
     with open(thumbnail_path, "wb") as file:
         file.write(response.content)
+
+    thumbnail_width = app_config.thumbnail_width
+    thumbnail_height = app_config.thumbnail_height
+
+    resize_image(thumbnail_path, thumbnail_path, (thumbnail_width, thumbnail_height))
 
     app_config.project_path = project_path
     app_config.save(".")
