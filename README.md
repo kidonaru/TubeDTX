@@ -209,7 +209,20 @@ NVIDIAのGPUを使用している場合はGPU版もインストール可能で�
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
    pip install --upgrade -r requirements.txt
    ```
+1. `setup.bat`を実行
 1. `run.bat`を実行
+
+
+### Onsets and Framesを使用したMIDI変換方法
+
+Windows版でのみ、Onsets and Framesを使用してMIDI変換をすることができます。
+オープンハイハットとライドシンバルの採譜が可能です。
+
+1. [fluidsynth](https://github.com/FluidSynth/fluidsynth/releases/tag/v2.3.2) をインストールします。
+   `fluidsynth-2.3.2-win10-x64.zip`をダウンロード、解凍して、
+    システムの詳細設定の環境変数からbinディレクトリのパスを通してください。
+1. "4. Convert to MIDI"タブのModelから"mixed"を選択します。
+1. "Convert"ボタンを押すとOnsets and Framesを使用して変換されます。
 
 
 ## 質問など
@@ -226,3 +239,5 @@ https://twitter.com/kidonaru
 - Demucs - https://github.com/facebookresearch/demucs
 - Wizard Notes - https://www.wizard-notes.com/
 - ChatGPT - https://openai.com/blog/chatgpt
+- Magenta - https://github.com/magenta/magenta/tree/main
+- Onsets and Frames Transcription - https://github.com/magenta/magenta/tree/main/magenta/models/onsets_frames_transcription
