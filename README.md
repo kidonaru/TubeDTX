@@ -219,7 +219,7 @@ Windows版でのみ、Onsets and Framesを使用してMIDI変換をすること�
 オープンハイハットとライドシンバルの採譜が可能です。
 
 1. [fluidsynth](https://github.com/FluidSynth/fluidsynth/releases/tag/v2.3.2) をインストールします。
-   `fluidsynth-2.3.2-win10-x64.zip`をダウンロード、解凍して、
+   `fluidsynth-2.3.2-win10-x64.zip`をダウンロード、適当なディレクトリに展開して、
     システムの詳細設定の環境変数からbinディレクトリのパスを通してください。
 1. "4. Convert to MIDI"タブのModelから"mixed"を選択します。
 1. "Convert"ボタンを押すとOnsets and Framesを使用して変換されます。
