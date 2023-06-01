@@ -13,7 +13,17 @@ cd modules/pytube
 pip install -e .
 cd ../..
 
+cd modules/magenta
+pip install -e . --no-dependencies
+cd ../..
+
+cd modules/pyfluidsynth
+pip install -e .
+cd ../..
+
 pip list
+
+type VERSION > .locel_version
 
 if not "%skip_key_wait%"=="true" (
   echo "All complate!!! plass any key..."

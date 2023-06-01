@@ -40,6 +40,10 @@ class JsonConfig:
         })
 
     @classmethod
+    def get_parameters_size(cls):
+        return len(inspect.signature(cls).parameters)
+
+    @classmethod
     def load(cls, config_dir):
         config_path = cls.get_config_path(config_dir)
         if not os.path.exists(config_path):
@@ -80,9 +84,6 @@ class ProjectConfig(JsonConfig):
     preview_fade_in_duration: float = 1.0
     preview_fade_out_duration: float = 5.0
 
-    separate_model: str = "htdemucs"
-    separate_jobs: int = cpu_count
-
     midi_input_name2: str = "drums.ogg"
     midi_resolution: int = 8
     midi_threshold: float = 0.2
@@ -108,6 +109,12 @@ class ProjectConfig(JsonConfig):
     ht_range: int = 4
     lt_range: int = 4
     ft_range: int = 0
+
+    e_gmd_sn_volume: int = 0
+    e_gmd_bd_volume: int = 0
+    e_gmd_ht_volume: int = 0
+    e_gmd_hho_volume: int = 100
+    e_gmd_ride_volume: int = 100
 
     dtx_input_name: str = "drums.mid"
     dtx_output_name: str = "score.dtx"
@@ -289,6 +296,12 @@ class AppConfig(JsonConfig):
     workspace_path: str = ""
     auto_save: bool = True
     bgm_bitrate: str = "192k"
+    thumbnail_width: int = 640
+    thumbnail_height: int = 480
+
+    separate_model: str = "htdemucs"
+    separate_jobs: int = cpu_count
+    midi_convert_model: str = "original"
 
     batch_download_movie: bool = True
     batch_convert_movie: bool = True

@@ -12,13 +12,11 @@ from moviepy.audio.fx.all import audio_fadein, audio_fadeout
 from moviepy.config import get_setting
 from typing import Tuple
 from pytube import YouTube
-
 from pytube.cipher import get_throttling_function_code
 import requests
-
 from bs4 import BeautifulSoup
-
 from scripts.debug_utils import debug_args
+from PIL import Image
 
 def randomname(n):
    return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
@@ -40,6 +38,36 @@ def get_tmp_file_path(ext):
     return tmp_file_path
 
 @debug_args
+def resize_image(input_image_path, output_image_path, size):
+    original_image = Image.open(input_image_path)
+    width, height = original_image.size
+    aspect_ratio = width / height
+    
+    # ターゲットのサイズとアスペクト比を設定
+    target_width = int(size[0])
+    target_height = int(size[1])
+    target_ratio = target_width / target_height
+
+    if aspect_ratio > target_ratio:
+        # 元の画像の方が横長
+        new_width = target_width
+        new_height = round(target_width / aspect_ratio)
+    else:
+        # 元の画像の方が縦長またはアスペクト比が等しい
+        new_height = target_height
+        new_width = round(target_height * aspect_ratio)
+    
+    resized_image = original_image.resize((new_width, new_height), Image.ANTIALIAS)
+
+    # 新しい画像を作成して黒で塗りつぶす
+    new_image = Image.new("RGB", (target_width, target_height), "black")
+    # リサイズした画像を新しい画像の中央に配置
+    new_image.paste(resized_image, ((target_width - new_width) // 2, (target_height - new_height) // 2))
+
+    # 画像を保存
+    new_image.save(output_image_path, quality = 85)
+
+@debug_args
 def get_video_info(url):
     # YouTubeのページを取得
     response = requests.get(url)
@@ -59,7 +87,7 @@ def get_video_info(url):
     return title, thumbnail_url
 
 @debug_args
-def download_video(url, output_path, thumbnail_path):
+def download_video(url, output_path, thumbnail_path, thumbnail_size):
     output_dir, filename = os.path.split(output_path)
     duration = 0
 
@@ -82,6 +110,8 @@ def download_video(url, output_path, thumbnail_path):
     response = requests.get(thumbnail_url)
     with open(thumbnail_path, "wb") as file:
         file.write(response.content)
+
+    resize_image(thumbnail_path, thumbnail_path, thumbnail_size)
 
     print(f"Thumbnail download is complete. {thumbnail_path}")
 
@@ -165,14 +195,24 @@ def extract_audio(input_path, output_path, target_dbfs, bitrate):
     print(f"Audio extract is complete. {output_path}")
 
 @debug_args
-def convert_audio(input_file, output_file, bitrate):
+def convert_audio(input_file, output_file, bitrate=None, remove_original=True):
     tmp_input_file = get_tmp_file_path(os.path.splitext(input_file)[1])
     tmp_output_file = get_tmp_file_path(os.path.splitext(output_file)[1])
 
-    shutil.move(input_file, tmp_input_file)
+    if remove_original:
+        shutil.move(input_file, tmp_input_file)
+    else:
+        shutil.copy(input_file, tmp_input_file)
 
     ffmpeg = get_setting("FFMPEG_BINARY")
-    cmd = [ffmpeg, '-y', '-i', tmp_input_file, '-ab', bitrate, tmp_output_file]
+    cmd = [ffmpeg, '-y', '-i', tmp_input_file]
+
+    if bitrate is not None:
+        cmd.append('-ab')
+        cmd.append(bitrate)
+
+    cmd.append(tmp_output_file)
+
     print(" ".join(cmd))
 
     subprocess.run(cmd)
@@ -229,3 +269,29 @@ def extract_title_and_artist(youtube_title: str) -> Tuple[str, str]:
             return title, artist
 
     return youtube_title, ""
+
+@debug_args
+def download_and_extract(url, target_path):
+    # URLからzipファイルをダウンロード
+    response = requests.get(url, stream=True)
+    if response.status_code != 200:
+        raise Exception(f"ダウンロードに失敗しました。 url: {url}")
+
+    tmp_dir = get_tmp_dir()
+    zip_path = os.path.join(tmp_dir, "download.zip")
+
+    if os.path.exists(zip_path):
+        os.remove(zip_path)
+
+    # ダウンロードしたファイルを保存
+    with open(zip_path, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=1024): 
+            if chunk:
+                f.write(chunk)
+
+    # zipファイルを解凍
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(target_path)
+
+    # zipファイルを削除
+    os.remove(zip_path)

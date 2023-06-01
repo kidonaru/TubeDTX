@@ -1,3 +1,9 @@
 [submodule "modules/pytube"]
 	path = modules/pytube
 	url = https://github.com/kidonaru/pytube.git
+[submodule "modules/magenta"]
+	path = modules/magenta
+	url = https://github.com/kidonaru/magenta.git
+[submodule "modules/pyfluidsynth"]
+	path = modules/pyfluidsynth
+	url = https://github.com/kidonaru/pyfluidsynth.git

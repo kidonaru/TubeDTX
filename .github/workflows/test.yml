@@ -29,5 +29,13 @@ jobs:
         pip install -e .
         cd ../..
 
+        cd modules/magenta
+        pip install -e . --no-dependencies
+        cd ../..
+
+        cd modules/pyfluidsynth
+        pip install -e .
+        cd ../..
+
     - name: Run tests
       run: python -m unittest discover -s ./tests

@@ -14,7 +14,7 @@ from scripts.debug_utils import debug_args
 hh_note = 42
 sn_note = 38
 bd_note = 36
-ht_note = 50
+ht_note = 48
 lt_note = 45
 ft_note = 41
 cy_note = 49
@@ -168,6 +168,13 @@ class DtxChip:
     resolution: int = 0
     velocity: int = 0
     wav_number: int = 0
+
+    @staticmethod
+    def create_pos_key(channel, measure_pos, beat_pos):
+        return f"{channel}_{measure_pos}_{beat_pos}"
+
+    def pos_key(self):
+        return DtxChip.create_pos_key(self.channel, self.measure_pos, self.beat_pos)
 
 def _clamp(n, smallest, largest):
     return sorted([smallest, n, largest])[1]
@@ -369,7 +376,7 @@ def midi_to_dtx(midi_file, output_path, output_image_path, dtx_info: DtxInfo):
 
         return offset + wav_num
 
-    dtx_chips: list[DtxChip] = []
+    dtx_chip_map: dict[str, DtxChip] = {}
 
     # Convert bgm, video to dtx_chips
     for current_time, next_time, current_measure, beat_pos in bgm_timings_list:
@@ -382,7 +389,7 @@ def midi_to_dtx(midi_file, output_path, output_image_path, dtx_info: DtxInfo):
                 resolution=dtx_info.BGM_RESOLUTION,
                 wav_number=1
             )
-            dtx_chips.append(dtx_chip_bgm)
+            dtx_chip_map[dtx_chip_bgm.pos_key()] = dtx_chip_bgm
 
             dtx_chip_video = DtxChip(
                 channel=video_channel,
@@ -392,7 +399,7 @@ def midi_to_dtx(midi_file, output_path, output_image_path, dtx_info: DtxInfo):
                 resolution=dtx_info.BGM_RESOLUTION,
                 wav_number=1
             )
-            dtx_chips.append(dtx_chip_video)
+            dtx_chip_map[dtx_chip_video.pos_key()] = dtx_chip_video
             break
 
     # Convert notes to dtx_chips
@@ -411,9 +418,18 @@ def midi_to_dtx(midi_file, output_path, output_image_path, dtx_info: DtxInfo):
                         velocity=note.velocity,
                         wav_number=wav_number
                     )
-                    dtx_chips.append(dtx_chip)
+                    dtx_chip_map[dtx_chip.pos_key()] = dtx_chip
+
+    # HHO/RIDEのチップがある場合、HHのチップは削除する
+    dtx_chips = list(dtx_chip_map.values())
+    for dtx_chip in dtx_chips:
+        if dtx_chip.channel == hho_channel or dtx_chip.channel == ride_channel:
+            pos_key = DtxChip.create_pos_key(hh_channel, dtx_chip.measure_pos, dtx_chip.beat_pos)
+            if pos_key in dtx_chip_map:
+                del dtx_chip_map[pos_key]
 
     # Convert dtx_chips to dtx_data
+    dtx_chips = list(dtx_chip_map.values())
     for dtx_chip in dtx_chips:
         measure_pos_str = str(dtx_chip.measure_pos).zfill(3)
         channel_key = measure_pos_str + dtx_chip.channel

@@ -9,8 +9,9 @@ import gradio as gr
 import requests
 
 from scripts.config_utils import AppConfig, ProjectConfig, DevConfig, app_config, dev_config
+from scripts.convert_to_midi_with_onsets_frames import convert_to_midi_with_onsets_frames
 from scripts.debug_utils import debug_args
-from scripts.media_utils import convert_audio, create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, trim_and_crop_video
+from scripts.media_utils import convert_audio, create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, resize_image, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
 from scripts.convert_to_midi import convert_to_midi_cqt, convert_to_midi_drums, convert_to_midi_peak, output_test_image
 from scripts.midi_to_dtx import midi_to_dtx
@@ -104,6 +105,11 @@ def new_score_gr(url: str):
     with open(thumbnail_path, "wb") as file:
         file.write(response.content)
 
+    thumbnail_width = app_config.thumbnail_width
+    thumbnail_height = app_config.thumbnail_height
+
+    resize_image(thumbnail_path, thumbnail_path, (thumbnail_width, thumbnail_height))
+
     app_config.project_path = project_path
     app_config.save(".")
 
@@ -157,14 +163,14 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
 
         if app_config.batch_separate_music:
             if not check_converted("drums.wav"):
-                outputs = separate_music_gr(*config.to_dict().values(), project_path=project_path, lock=lock)
+                outputs = separate_music_gr(*app_config.to_dict().values(), *config.to_dict().values(), project_path=project_path, lock=lock)
                 config = ProjectConfig.load(project_path)
                 base_output_log = outputs[0]
                 output_log += outputs[1]
 
         if app_config.batch_convert_to_midi:
             if not check_converted("drums.mid"):
-                outputs = convert_to_midi_gr(*config.to_dict().values(), project_path=project_path)
+                outputs = convert_to_midi_gr(*app_config.to_dict().values(), *config.to_dict().values(), project_path=project_path)
                 config = ProjectConfig.load(project_path)
                 base_output_log = outputs[0]
                 output_log += outputs[1]
@@ -233,6 +239,8 @@ def _download_video_gr(config: ProjectConfig, project_path):
     url = config.movie_url
     output_file_name = config.movie_download_file_name
     thumbnail_file_name = config.movie_thumbnail_file_name2
+    thumbnail_width = app_config.thumbnail_width
+    thumbnail_height = app_config.thumbnail_height
 
     if url == "":
         raise Exception("URLを入力してください。")
@@ -240,7 +248,11 @@ def _download_video_gr(config: ProjectConfig, project_path):
     output_path = os.path.join(project_path, output_file_name)
     thumbnail_path = os.path.join(project_path, thumbnail_file_name)
 
-    comment, title, artist, duration, width, height = download_video(url, output_path, thumbnail_path)
+    comment, title, artist, duration, width, height = download_video(
+        url,
+        output_path,
+        thumbnail_path,
+        (thumbnail_width, thumbnail_height))
 
     config.dtx_title = title
     config.dtx_artist = artist
@@ -402,13 +414,17 @@ def reload_preview_gr(*args, project_path=None):
 
 @debug_args
 def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
-    project_path = project_path or app_config.project_path
-    config = ProjectConfig(*args)
+    global app_config
+    app_config = AppConfig(*(args[:AppConfig.get_parameters_size()]))
+    app_config.save(".")
 
-    model = config.separate_model
+    project_path = project_path or app_config.project_path
+    config = ProjectConfig(*(args[AppConfig.get_parameters_size():]))
+
+    model = app_config.separate_model
+    jobs = app_config.separate_jobs
     input_file = config.bgm_name
     output_file = config.midi_input_name2
-    jobs = config.separate_jobs
     bitrate = app_config.bgm_bitrate
 
     input_path = os.path.join(project_path, input_file)
@@ -437,8 +453,12 @@ def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
 
 @debug_args
 def _convert_to_midi_gr(*args, project_path=None, is_test=False):
+    global app_config
+    app_config = AppConfig(*(args[:AppConfig.get_parameters_size()]))
+    app_config.save(".")
+
     project_path = project_path or app_config.project_path
-    config = ProjectConfig(*args)
+    config = ProjectConfig(*(args[AppConfig.get_parameters_size():]))
 
     input_file_name = config.midi_input_name2
     resolution = config.midi_resolution
@@ -452,11 +472,38 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
     adjust_offset_max = config.midi_adjust_offset_max
     velocity_max_percentile = config.midi_velocity_max_percentile
     bpm = config.dtx_bpm
+    convert_model = app_config.midi_convert_model
 
     input_path = os.path.join(project_path, input_file_name)
     test_image_path = None
 
-    if not is_test:
+    if convert_model == "e-gmd" and not is_test:
+        output_path = os.path.splitext(input_path)[0] + ".mid"
+        offset = 0
+        duration = None
+
+        convert_to_midi_with_onsets_frames(
+            output_path,
+            input_path,
+            offset,
+            duration,
+            bpm,
+            resolution,
+            hop_length,
+            onset_delta,
+            adjust_offset_count,
+            adjust_offset_min,
+            adjust_offset_max,
+            velocity_max_percentile,
+            convert_model,
+            config
+        )
+
+        output_log = "MIDIへの変換に成功しました。\n"
+        output_log += '"5. Convert to DTX"タブに進んでください。\n\n'
+        output_log += f"output_path: {output_path}\n\n"
+
+    elif convert_model == "original" and not is_test:
         output_path = os.path.splitext(input_path)[0] + ".mid"
         offset = 0
         duration = None
@@ -464,6 +511,54 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
         convert_to_midi_drums(
             output_path,
             input_path,
+            None,
+            offset,
+            duration,
+            bpm,
+            resolution,
+            threshold,
+            segmentation,
+            hop_length,
+            onset_delta,
+            disable_hh_frame,
+            adjust_offset_count,
+            adjust_offset_min,
+            adjust_offset_max,
+            velocity_max_percentile,
+            config)
+
+        output_log = "MIDIへの変換に成功しました。\n"
+        output_log += '"5. Convert to DTX"タブに進んでください。\n\n'
+        output_log += f"output_path: {output_path}\n\n"
+    
+    elif convert_model == "mixed" and not is_test:
+        output_path = os.path.splitext(input_path)[0] + ".mid"
+        convert_model = "e-gmd"
+        e_gmd_output_path = os.path.splitext(input_path)[0] + f".{convert_model}.mid"
+        offset = 0
+        duration = None
+
+        convert_to_midi_with_onsets_frames(
+            e_gmd_output_path,
+            input_path,
+            offset,
+            duration,
+            bpm,
+            resolution,
+            hop_length,
+            onset_delta,
+            adjust_offset_count,
+            adjust_offset_min,
+            adjust_offset_max,
+            velocity_max_percentile,
+            convert_model,
+            config
+        )
+
+        convert_to_midi_drums(
+            output_path,
+            input_path,
+            e_gmd_output_path,
             offset,
             duration,
             bpm,
@@ -493,6 +588,7 @@ def _convert_to_midi_gr(*args, project_path=None, is_test=False):
         convert_to_midi_drums(
             test_midi_path,
             input_path,
+            None,
             offset,
             duration,
             bpm,

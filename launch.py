@@ -4,6 +4,7 @@ from scripts.config_utils import ProjectConfig, app_config, dev_config
 from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr, dev_select_separate_audio_gr, dev_separate_audio_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
+midi_models = ["original", "e-gmd", "mixed"]
 
 config = ProjectConfig.load(app_config.project_path)
 
@@ -43,6 +44,8 @@ with gr.Blocks(title="TubeDTX") as demo:
                                     workspace_new_score_button = gr.Button("New", variant="primary")
                             auto_save_checkbox = gr.Checkbox(value=app_config.auto_save, label="Auto Save", visible=False)
                             bgm_bitrate_textbox = gr.Textbox(value=app_config.bgm_bitrate, label="BGM Bitrate", visible=False)
+                            thumbnail_width_slider = gr.Number(value=app_config.thumbnail_width, label="Thumbnail Width", visible=False)
+                            thumbnail_height_slider = gr.Number(value=app_config.thumbnail_height, label="Thumbnail Height", visible=False)
                             workspace_reload_button = gr.Button("Reload", variant="primary")
                             workspace_video = gr.Video(source="upload")
                         with gr.TabItem("Batch"):
@@ -151,8 +154,8 @@ with gr.Blocks(title="TubeDTX") as demo:
                 with gr.Column():
                     add_space(1)
                     separate_button = gr.Button("Separate", variant="primary")
-                    separate_model_dropdown = gr.Dropdown(demucs_models, value=config.separate_model, label="Model")
-                    separate_jobs_slider = gr.Slider(0, 32, value=config.separate_jobs, step=1, label="Number of Jobs")
+                    separate_model_dropdown = gr.Dropdown(demucs_models, value=app_config.separate_model, label="Model")
+                    separate_jobs_slider = gr.Slider(0, 32, value=app_config.separate_jobs, step=1, label="Number of Jobs")
                 with gr.Column():
                     separate_output = gr.Textbox(show_label=False)
                     separate_output_audio = gr.Audio(label="Result", source="upload", type="filepath")
@@ -175,6 +178,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                     with gr.Tabs():
                         with gr.TabItem("Base"):
                             midi_input_name_textbox = gr.Textbox(label="Input File Name", value=config.midi_input_name2)
+                            midi_convert_model_dropdown = gr.Dropdown(midi_models, value=app_config.midi_convert_model, label="Model")
                             midi_resolution_slider = gr.Slider(0, 16, step=1, value=config.midi_resolution, label="Resolution")
                             with gr.Row():
                                 midi_threshold_slider = gr.Slider(0, 1, value=config.midi_threshold, label="Threshold")
@@ -210,6 +214,16 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 midi_ft_min_slider = gr.Slider(0, 127, step=1, value=config.ft_min, label="FloorTom Min")
                                 midi_ft_range_slider = gr.Slider(0, 127, step=1, value=config.ft_range, label="FloorTom Range")
                             midi_reset_pitch_button = gr.Button("Reset").style(full_width=False, size='sm')
+                        with gr.TabItem("e-gmd"):
+                            with gr.Row():
+                                e_gmd_sn_volume_slider = gr.Slider(0, 100, step=1, value=config.e_gmd_sn_volume, label="Snare Volume")
+                                e_gmd_bd_volume_slider = gr.Slider(0, 100, step=1, value=config.e_gmd_bd_volume, label="BD Volume")
+                            with gr.Row():
+                                e_gmd_ht_volume_slider = gr.Slider(0, 100, step=1, value=config.e_gmd_ht_volume, label="HiHat Volume")
+                                e_gmd_hho_volume_slider = gr.Slider(0, 100, step=1, value=config.e_gmd_hho_volume, label="HiHatOpen Volume")
+                            with gr.Row():
+                                e_gmd_ride_volume_slider = gr.Slider(0, 100, step=1, value=config.e_gmd_ride_volume, label="RideCymbal Volume")
+                            e_gmd_reset_button = gr.Button("Reset").style(full_width=False, size='sm')
                 with gr.Column():
                     midi_output = gr.Textbox(show_label=False)
                     midi_output_image = gr.Image(show_label=False)
@@ -384,6 +398,12 @@ with gr.Blocks(title="TubeDTX") as demo:
         workspace_path_textbox,
         auto_save_checkbox,
         bgm_bitrate_textbox,
+        thumbnail_width_slider,
+        thumbnail_height_slider,
+
+        separate_model_dropdown,
+        separate_jobs_slider,
+        midi_convert_model_dropdown,
 
         batch_download_movie_checkbox,
         batch_convert_movie_checkbox,
@@ -477,9 +497,6 @@ with gr.Blocks(title="TubeDTX") as demo:
         preview_fade_in_duration_slider,
         preview_fade_out_duration_slider,
 
-        separate_model_dropdown,
-        separate_jobs_slider,
-
         midi_input_name_textbox,
         midi_resolution_slider,
         midi_threshold_slider,
@@ -505,6 +522,12 @@ with gr.Blocks(title="TubeDTX") as demo:
         midi_ht_range_slider,
         midi_lt_range_slider,
         midi_ft_range_slider,
+
+        e_gmd_sn_volume_slider,
+        e_gmd_bd_volume_slider,
+        e_gmd_ht_volume_slider,
+        e_gmd_hho_volume_slider,
+        e_gmd_ride_volume_slider,
 
         dtx_input_name_textbox,
         dtx_output_name_textbox,
@@ -666,7 +689,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                       ])
 
     separate_button.click(separate_music_gr,
-                          inputs=inputs,
+                          inputs=[
+                              *app_config_inputs,
+                              *inputs,
+                          ],
                           outputs=[
                                 base_output,
                                 separate_output,
@@ -675,7 +701,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                           ])
 
     midi_convert_button.click(convert_to_midi_gr,
-                      inputs=inputs,
+                      inputs=[
+                            *app_config_inputs,
+                            *inputs,
+                      ],
                       outputs=[
                             base_output,
                             midi_output,
@@ -683,7 +712,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                       ])
 
     midi_convert_test_button.click(convert_test_to_midi_gr,
-                      inputs=inputs,
+                      inputs=[
+                            *app_config_inputs,
+                            *inputs,
+                      ],
                       outputs=[
                             base_output,
                             midi_output,
