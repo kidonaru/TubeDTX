@@ -95,12 +95,14 @@ def download_video(url, output_path, thumbnail_path, thumbnail_size):
             'outtmpl' : output_path,
             'format' : 'bestvideo[ext=mp4]+bestaudio[ext=m4a]',
             'merge-output-format' : 'mp4',
+            'ffmpeg_location': get_setting("FFMPEG_BINARY"),
         }
     elif ext == ".webm":
         option = {
             'outtmpl' : output_path,
             'format' : 'bestvideo[ext=webm]+bestaudio[ext=webm]',
             'merge-output-format' : 'webm',
+            'ffmpeg_location': get_setting("FFMPEG_BINARY"),
         }
     else:
         raise Exception(f"サポートされていない拡張子です。 ext: {ext}")
