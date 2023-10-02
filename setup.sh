@@ -9,7 +9,7 @@ git submodule update --init --recursive
 python3.10 -m venv venv
 source ./venv/bin/activate
 
-pip3 install --upgrade -r requirements.txt
+pip3 install --upgrade -r requirements-osx.txt
 
 cd modules/magenta
 pip3 install -e . --no-dependencies
