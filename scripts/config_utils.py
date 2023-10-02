@@ -73,6 +73,7 @@ class AppConfig(JsonConfig):
     bgm_bitrate: str = "192k"
     thumbnail_width: int = 640
     thumbnail_height: int = 480
+    default_dbfs: float = 0
 
     separate_model: str = "htdemucs"
     separate_jobs: int = cpu_count

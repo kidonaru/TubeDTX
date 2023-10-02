@@ -47,6 +47,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                             bgm_bitrate_textbox = gr.Textbox(value=app_config.bgm_bitrate, label="BGM Bitrate", visible=False)
                             thumbnail_width_slider = gr.Number(value=app_config.thumbnail_width, label="Thumbnail Width", visible=False)
                             thumbnail_height_slider = gr.Number(value=app_config.thumbnail_height, label="Thumbnail Height", visible=False)
+                            default_dbfs_slider = gr.Slider(value=app_config.default_dbfs, label="Default dBFS", minimum=-30, maximum=0, step=1, visible=False)
                             workspace_reload_button = gr.Button("Reload", variant="primary")
                             workspace_video = gr.Video(source="upload")
                         with gr.TabItem("Batch"):
@@ -402,6 +403,7 @@ with gr.Blocks(title="TubeDTX") as demo:
         bgm_bitrate_textbox,
         thumbnail_width_slider,
         thumbnail_height_slider,
+        default_dbfs_slider,
 
         separate_model_dropdown,
         separate_jobs_slider,
@@ -624,7 +626,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                                             ])
 
     movie_download_and_convert_button.click(download_and_convert_video_gr,
-                          inputs=inputs,
+                          inputs=[
+                                *app_config_inputs,
+                                *inputs,
+                          ],
                           outputs=[
                                 base_output,
                                 movie_output,
@@ -638,7 +643,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                           ])
 
     movie_download_button.click(download_video_gr,
-                          inputs=inputs,
+                          inputs=[
+                                *app_config_inputs,
+                                *inputs,
+                          ],
                           outputs=[
                                 base_output,
                                 movie_output,
@@ -652,7 +660,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                           ])
 
     movie_convert_button.click(convert_video_gr,
-                          inputs=inputs,
+                          inputs=[
+                                *app_config_inputs,
+                                *inputs,
+                          ],
                           outputs=[
                                 base_output,
                                 movie_output,

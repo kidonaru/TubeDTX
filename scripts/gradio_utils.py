@@ -142,14 +142,14 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
     try:
         if app_config.batch_download_movie:
             if not check_converted(config.movie_download_file_name2):
-                outputs = download_video_gr(*config.to_dict().values(), project_path=project_path)
+                outputs = download_video_gr(*app_config.to_dict().values(), *config.to_dict().values(), project_path=project_path)
                 config = ProjectConfig.load(project_path)
                 base_output_log = outputs[0]
                 output_log += outputs[1]
 
         if app_config.batch_convert_movie:
             if not check_converted(config.bgm_name):
-                outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path)
+                outputs = convert_video_gr(*app_config.to_dict().values(), *config.to_dict().values(), project_path=project_path)
                 config = ProjectConfig.load(project_path)
                 base_output_log = outputs[0]
                 output_log += outputs[1]
@@ -279,7 +279,7 @@ def _convert_video_gr(config: ProjectConfig, project_path):
     end_time = config.movie_end_time
     width = config.movie_width
     height = config.movie_height
-    target_dbfs = config.movie_target_dbfs
+    target_dbfs = config.movie_target_dbfs if config.movie_target_dbfs < 0 else app_config.default_dbfs
     bitrate = app_config.bgm_bitrate
 
     input_path = os.path.join(project_path, input_file_name)
@@ -300,9 +300,19 @@ def _convert_video_gr(config: ProjectConfig, project_path):
     return [base_output_log, output_log, input_path, output_path, bgm_path]
 
 @debug_args
-def download_and_convert_video_gr(*args, project_path=None):
+def _parse_args(*args, project_path=None):
+    global app_config
+    app_config = AppConfig(*(args[:AppConfig.get_parameters_size()]))
+    app_config.save(".")
+
     project_path = project_path or app_config.project_path
-    config = ProjectConfig(*args)
+    config = ProjectConfig(*(args[AppConfig.get_parameters_size():]))
+
+    return config, project_path
+
+@debug_args
+def download_and_convert_video_gr(*args, project_path=None):
+    config, project_path = _parse_args(*args, project_path=project_path)
 
     download_outputs = _download_video_gr(config, project_path)
 
@@ -318,8 +328,7 @@ def download_and_convert_video_gr(*args, project_path=None):
 
 @debug_args
 def download_video_gr(*args, project_path=None):
-    project_path = project_path or app_config.project_path
-    config = ProjectConfig(*args)
+    config, project_path = _parse_args(*args, project_path=project_path)
 
     outputs = _download_video_gr(config, project_path)
 
@@ -327,8 +336,7 @@ def download_video_gr(*args, project_path=None):
 
 @debug_args
 def convert_video_gr(*args, project_path=None):
-    project_path = project_path or app_config.project_path
-    config = ProjectConfig(*args)
+    config, project_path = _parse_args(*args, project_path=project_path)
 
     outputs = _convert_video_gr(config, project_path)
 
