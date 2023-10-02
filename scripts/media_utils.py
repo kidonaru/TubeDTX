@@ -6,6 +6,7 @@ import string
 import subprocess
 import time
 import zipfile
+import urllib.parse
 from moviepy.video.fx.crop import crop
 from moviepy.editor import AudioFileClip, AudioClip, VideoFileClip
 from moviepy.audio.fx.all import audio_fadein, audio_fadeout
@@ -86,8 +87,20 @@ def get_video_info(url):
     return title, thumbnail_url
 
 @debug_args
+def format_youtube_url(url):
+    # urlからvパラメータ以外を削除
+    pr = urllib.parse.urlparse(url)
+    qsl = urllib.parse.parse_qsl(pr.query)
+    qsl = [q for q in qsl if q[0] == "v"]
+    pr._replace(query=urllib.parse.urlencode(qsl))
+    url = urllib.parse.urlunparse(pr)
+    return url
+
+@debug_args
 def download_video(url, output_path, thumbnail_path, thumbnail_size):
     duration = 0
+
+    url = format_youtube_url(url)
 
     ext = os.path.splitext(output_path)[1]
     if ext == ".mp4":
