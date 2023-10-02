@@ -11,12 +11,11 @@ from moviepy.editor import AudioFileClip, AudioClip, VideoFileClip
 from moviepy.audio.fx.all import audio_fadein, audio_fadeout
 from moviepy.config import get_setting
 from typing import Tuple
-from pytube import YouTube
-from pytube.cipher import get_throttling_function_code
 import requests
 from bs4 import BeautifulSoup
 from scripts.debug_utils import debug_args
 from PIL import Image
+from yt_dlp import YoutubeDL
 
 def randomname(n):
    return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
@@ -88,16 +87,34 @@ def get_video_info(url):
 
 @debug_args
 def download_video(url, output_path, thumbnail_path, thumbnail_size):
-    output_dir, filename = os.path.split(output_path)
     duration = 0
 
-    yt = YouTube(url)
-    video = yt.streams.get_highest_resolution()
+    ext = os.path.splitext(output_path)[1]
+    if ext == ".mp4":
+        option = {
+            'outtmpl' : output_path,
+            'format' : 'bestvideo[ext=mp4]+bestaudio[ext=m4a]',
+            'merge-output-format' : 'mp4',
+        }
+    elif ext == ".webm":
+        option = {
+            'outtmpl' : output_path,
+            'format' : 'bestvideo[ext=webm]+bestaudio[ext=webm]',
+            'merge-output-format' : 'webm',
+        }
+    else:
+        raise Exception(f"サポートされていない拡張子です。 ext: {ext}")
+
+    ydl = YoutubeDL(option)
+    result = ydl.download([url])
+    if result != 0:
+        raise Exception(f"ダウンロードに失敗しました。 url: {url}")
+
     original_title, thumbnail_url = get_video_info(url)
     title, artist = extract_title_and_artist(original_title)
     if artist == "":
-        artist = yt.author
-    video.download(output_path=output_dir, filename=filename)
+        info = ydl.extract_info(url, download=False)
+        artist = info["uploader"]
 
     print(f"Video download is complete. {output_path}")
 
@@ -119,8 +136,9 @@ def download_video(url, output_path, thumbnail_path, thumbnail_size):
 
 @debug_args
 def trim_and_crop_video(input_path, output_path, start_time, end_time, width, height, bitrate):
-    # パラメータが全て0の場合は何もしない
-    if start_time == 0.0 and end_time == 0.0 and width == 0 and height == 0:
+    # mp4でパラメータが全て0の場合は何もしない
+    ext = os.path.splitext(input_path)[1]
+    if start_time == 0.0 and end_time == 0.0 and width == 0 and height == 0 and ext == ".mp4":
         print(f"Skip trim_and_crop_video. {input_path}")
         return input_path
 

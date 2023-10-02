@@ -141,7 +141,7 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
 
     try:
         if app_config.batch_download_movie:
-            if not check_converted(config.movie_download_file_name):
+            if not check_converted(config.movie_download_file_name2):
                 outputs = download_video_gr(*config.to_dict().values(), project_path=project_path)
                 config = ProjectConfig.load(project_path)
                 base_output_log = outputs[0]
@@ -237,7 +237,7 @@ def batch_convert_all_score_gr(*args):
 @debug_args
 def _download_video_gr(config: ProjectConfig, project_path):
     url = config.movie_url
-    output_file_name = config.movie_download_file_name
+    output_file_name = config.movie_download_file_name2
     thumbnail_file_name = config.movie_thumbnail_file_name2
     thumbnail_width = app_config.thumbnail_width
     thumbnail_height = app_config.thumbnail_height
@@ -272,7 +272,7 @@ def _download_video_gr(config: ProjectConfig, project_path):
 
 @debug_args
 def _convert_video_gr(config: ProjectConfig, project_path):
-    input_file_name = config.movie_download_file_name
+    input_file_name = config.movie_download_file_name2
     output_file_name = config.movie_output_file_name
     bgm_file_name = config.bgm_name
     start_time = config.movie_start_time
@@ -339,7 +339,7 @@ def reload_video_gr(*args, project_path=None):
     project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
-    input_file_name = config.movie_download_file_name
+    input_file_name = config.movie_download_file_name2
     output_file_name = config.movie_output_file_name
     bgm_file_name = config.bgm_name
 
@@ -719,7 +719,7 @@ def _midi_to_dtx_gr(config: ProjectConfig, project_path: str, output_image: bool
     dtx_info = config.get_dtx_info()
 
     if not os.path.exists(os.path.join(project_path, dtx_info.VIDEO)):
-        dtx_info.VIDEO = config.movie_download_file_name
+        dtx_info.VIDEO = config.movie_download_file_name2
 
     dtx_text = midi_to_dtx(input_path, output_path, output_image_path, dtx_info)
 

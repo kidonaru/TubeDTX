@@ -1,6 +1,3 @@
-[submodule "modules/pytube"]
-	path = modules/pytube
-	url = https://github.com/kidonaru/pytube.git
 [submodule "modules/magenta"]
 	path = modules/magenta
 	url = https://github.com/kidonaru/magenta.git

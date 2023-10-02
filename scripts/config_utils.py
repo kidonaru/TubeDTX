@@ -65,11 +65,75 @@ class JsonConfig:
 cpu_count = multiprocessing.cpu_count()
 
 @dataclass
+class AppConfig(JsonConfig):
+    project_path: str = ""
+    workspace_path: str = ""
+    auto_save: bool = True
+    download_format: str = "webm"
+    bgm_bitrate: str = "192k"
+    thumbnail_width: int = 640
+    thumbnail_height: int = 480
+
+    separate_model: str = "htdemucs"
+    separate_jobs: int = cpu_count
+    midi_convert_model: str = "original"
+
+    batch_download_movie: bool = True
+    batch_convert_movie: bool = True
+    batch_create_preview: bool = True
+    batch_separate_music: bool = True
+    batch_convert_to_midi: bool = True
+    batch_convert_to_dtx: bool = True
+
+    batch_skip_converted: bool = True
+    batch_jobs: int = 1
+
+    def get_project_paths(self):
+        if not os.path.isdir(self.workspace_path):
+            return []
+
+        files = os.listdir(self.workspace_path)
+        project_paths = [os.path.join(self.workspace_path, f) for f in files if os.path.isdir(os.path.join(self.workspace_path, f))]
+        return project_paths
+
+    @classmethod
+    def get_preimage(cls, project_path):
+        preimage = os.path.join(project_path, "pre.jpg")
+        if not os.path.exists(preimage):
+            preimage = os.path.join("resources", "pre.jpg")
+        return preimage
+
+    def get_current_preimage(self):
+        return AppConfig.get_preimage(self.project_path)
+
+    @classmethod
+    def get_movie(cls, project_path):
+        movie_path = os.path.join(project_path, "movie.mp4")
+        if not os.path.exists(movie_path):
+            movie_path = None
+        return movie_path
+
+    def get_current_movie(self):
+        return AppConfig.get_movie(self.project_path)
+
+    def get_all_preimages(self):
+        project_paths = self.get_project_paths()
+        preimages = [AppConfig.get_preimage(f) for f in project_paths]
+        return preimages
+
+    def get_all_gallery(self):
+        project_paths = self.get_project_paths()
+        gallery = [(AppConfig.get_preimage(f), os.path.basename(f)) for f in project_paths]
+        return gallery
+
+app_config = AppConfig.load(".")
+
+@dataclass
 class ProjectConfig(JsonConfig):
     bgm_name: str = "bgm.ogg"
 
     movie_url: str = ""
-    movie_download_file_name: str = "source.mp4"
+    movie_download_file_name2: str = f"source.{app_config.download_format}"
     movie_output_file_name: str = "movie.mp4"
     movie_thumbnail_file_name2: str = "pre.jpg"
     movie_start_time: float = 0.0
@@ -289,69 +353,6 @@ class ProjectConfig(JsonConfig):
             self.lp_wav,
             self.lbd_wav,
         ]
-
-@dataclass
-class AppConfig(JsonConfig):
-    project_path: str = ""
-    workspace_path: str = ""
-    auto_save: bool = True
-    bgm_bitrate: str = "192k"
-    thumbnail_width: int = 640
-    thumbnail_height: int = 480
-
-    separate_model: str = "htdemucs"
-    separate_jobs: int = cpu_count
-    midi_convert_model: str = "original"
-
-    batch_download_movie: bool = True
-    batch_convert_movie: bool = True
-    batch_create_preview: bool = True
-    batch_separate_music: bool = True
-    batch_convert_to_midi: bool = True
-    batch_convert_to_dtx: bool = True
-
-    batch_skip_converted: bool = True
-    batch_jobs: int = 1
-
-    def get_project_paths(self):
-        if not os.path.isdir(self.workspace_path):
-            return []
-
-        files = os.listdir(self.workspace_path)
-        project_paths = [os.path.join(self.workspace_path, f) for f in files if os.path.isdir(os.path.join(self.workspace_path, f))]
-        return project_paths
-
-    @classmethod
-    def get_preimage(cls, project_path):
-        preimage = os.path.join(project_path, "pre.jpg")
-        if not os.path.exists(preimage):
-            preimage = os.path.join("resources", "pre.jpg")
-        return preimage
-
-    def get_current_preimage(self):
-        return AppConfig.get_preimage(self.project_path)
-
-    @classmethod
-    def get_movie(cls, project_path):
-        movie_path = os.path.join(project_path, "movie.mp4")
-        if not os.path.exists(movie_path):
-            movie_path = None
-        return movie_path
-
-    def get_current_movie(self):
-        return AppConfig.get_movie(self.project_path)
-
-    def get_all_preimages(self):
-        project_paths = self.get_project_paths()
-        preimages = [AppConfig.get_preimage(f) for f in project_paths]
-        return preimages
-
-    def get_all_gallery(self):
-        project_paths = self.get_project_paths()
-        gallery = [(AppConfig.get_preimage(f), os.path.basename(f)) for f in project_paths]
-        return gallery
-
-app_config = AppConfig.load(".")
 
 @dataclass
 class DevConfig(JsonConfig):

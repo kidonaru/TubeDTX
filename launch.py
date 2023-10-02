@@ -43,6 +43,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                                 with gr.Column(scale=1, min_width=50):
                                     workspace_new_score_button = gr.Button("New", variant="primary")
                             auto_save_checkbox = gr.Checkbox(value=app_config.auto_save, label="Auto Save", visible=False)
+                            download_format_textbox = gr.Textbox(value=app_config.download_format, label="Download Format", visible=False)
                             bgm_bitrate_textbox = gr.Textbox(value=app_config.bgm_bitrate, label="BGM Bitrate", visible=False)
                             thumbnail_width_slider = gr.Number(value=app_config.thumbnail_width, label="Thumbnail Width", visible=False)
                             thumbnail_height_slider = gr.Number(value=app_config.thumbnail_height, label="Thumbnail Height", visible=False)
@@ -92,7 +93,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                     with gr.Row():
                         movie_url_textbox = gr.Textbox(label="YouTube URL", value=config.movie_url)
                     with gr.Row():
-                        movie_download_file_textbox = gr.Textbox(label="Download File Name", value=config.movie_download_file_name)
+                        movie_download_file_textbox = gr.Textbox(label="Download File Name", value=config.movie_download_file_name2)
                         movie_output_file_textbox = gr.Textbox(label="Output File Name", value=config.movie_output_file_name)
                     with gr.Row():
                         bgm_name_textbox = gr.Textbox(label="BGM File Name", value=config.bgm_name)
@@ -397,6 +398,7 @@ with gr.Blocks(title="TubeDTX") as demo:
         project_path_textbox,
         workspace_path_textbox,
         auto_save_checkbox,
+        download_format_textbox,
         bgm_bitrate_textbox,
         thumbnail_width_slider,
         thumbnail_height_slider,
