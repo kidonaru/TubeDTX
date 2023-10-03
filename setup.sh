@@ -11,6 +11,10 @@ source ./venv/bin/activate
 
 pip3 install --upgrade -r requirements-osx.txt
 
+cd modules/pytube
+pip3 install -e .
+cd ../..
+
 cd modules/magenta
 pip3 install -e . --no-dependencies
 cd ../..

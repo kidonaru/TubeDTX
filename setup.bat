@@ -9,6 +9,10 @@ call venv\Scripts\activate.bat
 
 pip install --upgrade -r requirements.txt
 
+cd modules/pytube
+pip install -e .
+cd ../..
+
 cd modules/magenta
 pip install -e . --no-dependencies
 cd ../..

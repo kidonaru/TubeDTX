@@ -62,6 +62,16 @@ class JsonConfig:
         with open(config_path, "w") as f:
             json.dump(asdict(self), f, indent=2)
 
+    def update(self, *args, **kwargs):
+        if args:
+            for key, value in zip(self.__annotations__.keys(), args):
+                setattr(self, key, value)
+
+        # Update attributes with keyword arguments
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
 cpu_count = multiprocessing.cpu_count()
 
 @dataclass
@@ -70,6 +80,7 @@ class AppConfig(JsonConfig):
     workspace_path: str = ""
     auto_save: bool = True
     download_format: str = "webm"
+    downloader: str = "pytube"
     bgm_bitrate: str = "192k"
     thumbnail_width: int = 640
     thumbnail_height: int = 480
@@ -88,6 +99,14 @@ class AppConfig(JsonConfig):
 
     batch_skip_converted: bool = True
     batch_jobs: int = 1
+
+    _instance = None # Singleton instance
+
+    @classmethod
+    def instance(cls):
+        if cls._instance is None:
+            cls._instance = cls.load(".")
+        return cls._instance
 
     def get_project_paths(self):
         if not os.path.isdir(self.workspace_path):
@@ -127,14 +146,14 @@ class AppConfig(JsonConfig):
         gallery = [(AppConfig.get_preimage(f), os.path.basename(f)) for f in project_paths]
         return gallery
 
-app_config = AppConfig.load(".")
+app_config = AppConfig.instance()
 
 @dataclass
 class ProjectConfig(JsonConfig):
     bgm_name: str = "bgm.ogg"
 
     movie_url: str = ""
-    movie_download_file_name2: str = f"source.{app_config.download_format}"
+    movie_download_file_name: str = "source.mp4"
     movie_output_file_name: str = "movie.mp4"
     movie_thumbnail_file_name2: str = "pre.jpg"
     movie_start_time: float = 0.0
@@ -354,6 +373,10 @@ class ProjectConfig(JsonConfig):
             self.lp_wav,
             self.lbd_wav,
         ]
+    
+    def get_fixed_download_file_name(self):
+        base_name = os.path.splitext(self.movie_download_file_name)[0]
+        return f"{base_name}.{app_config.download_format}"
 
 @dataclass
 class DevConfig(JsonConfig):
@@ -363,9 +386,17 @@ class DevConfig(JsonConfig):
     separate_model: str = "htdemucs"
     separate_jobs: int = cpu_count
 
+    _instance = None # Singleton instance
+
+    @classmethod
+    def instance(cls):
+        if cls._instance is None:
+            cls._instance = cls.load(".")
+        return cls._instance
+
     @classmethod
     def get_config_name(cls):
         return "dev_config.json"
 
-dev_config = DevConfig.load(".")
+dev_config = DevConfig.instance()
 dev_config.save(".")
