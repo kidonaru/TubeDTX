@@ -1,12 +1,16 @@
 import gradio as gr
 
-from scripts.config_utils import ProjectConfig, app_config, dev_config
+from scripts.config_utils import AppConfig, ProjectConfig, DevConfig
 from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr, dev_select_separate_audio_gr, dev_separate_audio_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
 midi_models = ["original", "e-gmd", "mixed"]
+movie_downloaders = ["pytube", "yt-dlp"]
+download_formats = ["mp4", "webm"]
 
+app_config = AppConfig.instance()
 config = ProjectConfig.load(app_config.project_path)
+dev_config = DevConfig.instance()
 
 def add_space(space_count:int=1):
     for i in range(0, space_count):
@@ -92,6 +96,9 @@ with gr.Blocks(title="TubeDTX") as demo:
                     with gr.Row():
                         movie_url_textbox = gr.Textbox(label="YouTube URL", value=config.movie_url)
                     with gr.Row():
+                        downloader_dropdown = gr.Dropdown(movie_downloaders, value=app_config.downloader, label="Downloader (Global)")
+                        download_format_dropdown = gr.Dropdown(download_formats, value=app_config.download_format, label="Download Format (Global)")
+                    with gr.Row():
                         movie_download_file_textbox = gr.Textbox(label="Download File Name", value=config.movie_download_file_name)
                         movie_output_file_textbox = gr.Textbox(label="Output File Name", value=config.movie_output_file_name)
                     with gr.Row():
@@ -103,7 +110,9 @@ with gr.Blocks(title="TubeDTX") as demo:
                     with gr.Row():
                         movie_width_slider = gr.Number(value=config.movie_width, label="Crop Width")
                         movie_height_slider = gr.Number(value=config.movie_height, label="Crop Height")
-                    movie_target_dbfs_slider = gr.Slider(value=config.movie_target_dbfs, label="Target dBFS", minimum=-30, maximum=0, step=1)
+                    with gr.Row():
+                        movie_target_dbfs_slider = gr.Slider(value=config.movie_target_dbfs, label="Target dBFS", minimum=-30, maximum=0, step=1)
+                        default_dbfs_slider = gr.Slider(value=app_config.default_dbfs, label="Default dBFS (Global)", minimum=-30, maximum=0, step=1)
                 with gr.Column():
                     movie_output = gr.Textbox(show_label=False)
                     movie_input_video = gr.Video(label="Input", source="upload")
@@ -115,9 +124,12 @@ with gr.Blocks(title="TubeDTX") as demo:
             text += "\"Convert\"ボタンを押すと、ダウンロード処理を飛ばして変換処理のみを行います。\n"
             text += "\"Refresh\"ボタンを押すと、表示を更新します。\n\n"
 
+            text += "- Downloader (Global): ダウンローダーを指定します\n"
+            text += "- Download Format (Global): ダウンロードするファイル形式を指定します。webmのほうが高解像度ですが処理時間が増えます\n"
             text += "- Trim Start/End Time: 切り取り時間を指定します\n"
             text += "- Crop Width/Height: 動画のクリップするサイズを指定します\n"
-            text += "- Target dBFS: 目標音量を指定します。YouTube標準は-12dBFS程度。0で無効化\n"
+            text += "- Target dBFS: 目標音量を指定します。YouTube標準は-12dBFS程度。0で指定なし\n"
+            text += "- Default dBFS (Global): 目標音量を指定しない場合のデフォルト値\n"
 
             gr.TextArea(text, show_label=False)
         with gr.TabItem("2. Create Preview File"):
@@ -154,8 +166,8 @@ with gr.Blocks(title="TubeDTX") as demo:
                 with gr.Column():
                     add_space(1)
                     separate_button = gr.Button("Separate", variant="primary")
-                    separate_model_dropdown = gr.Dropdown(demucs_models, value=app_config.separate_model, label="Model")
-                    separate_jobs_slider = gr.Slider(0, 32, value=app_config.separate_jobs, step=1, label="Number of Jobs")
+                    separate_model_dropdown = gr.Dropdown(demucs_models, value=app_config.separate_model, label="Model (Global)")
+                    separate_jobs_slider = gr.Slider(0, 32, value=app_config.separate_jobs, step=1, label="Number of Jobs (Global)")
                 with gr.Column():
                     separate_output = gr.Textbox(show_label=False)
                     separate_output_audio = gr.Audio(label="Result", source="upload", type="filepath")
@@ -178,7 +190,7 @@ with gr.Blocks(title="TubeDTX") as demo:
                     with gr.Tabs():
                         with gr.TabItem("Base"):
                             midi_input_name_textbox = gr.Textbox(label="Input File Name", value=config.midi_input_name2)
-                            midi_convert_model_dropdown = gr.Dropdown(midi_models, value=app_config.midi_convert_model, label="Model")
+                            midi_convert_model_dropdown = gr.Dropdown(midi_models, value=app_config.midi_convert_model, label="Model (Global)")
                             midi_resolution_slider = gr.Slider(0, 16, step=1, value=config.midi_resolution, label="Resolution")
                             with gr.Row():
                                 midi_threshold_slider = gr.Slider(0, 1, value=config.midi_threshold, label="Threshold")
@@ -397,9 +409,12 @@ with gr.Blocks(title="TubeDTX") as demo:
         project_path_textbox,
         workspace_path_textbox,
         auto_save_checkbox,
+        download_format_dropdown,
+        downloader_dropdown,
         bgm_bitrate_textbox,
         thumbnail_width_slider,
         thumbnail_height_slider,
+        default_dbfs_slider,
 
         separate_model_dropdown,
         separate_jobs_slider,
@@ -622,7 +637,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                                             ])
 
     movie_download_and_convert_button.click(download_and_convert_video_gr,
-                          inputs=inputs,
+                          inputs=[
+                                *app_config_inputs,
+                                *inputs,
+                          ],
                           outputs=[
                                 base_output,
                                 movie_output,
@@ -636,7 +654,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                           ])
 
     movie_download_button.click(download_video_gr,
-                          inputs=inputs,
+                          inputs=[
+                                *app_config_inputs,
+                                *inputs,
+                          ],
                           outputs=[
                                 base_output,
                                 movie_output,
@@ -650,7 +671,10 @@ with gr.Blocks(title="TubeDTX") as demo:
                           ])
 
     movie_convert_button.click(convert_video_gr,
-                          inputs=inputs,
+                          inputs=[
+                                *app_config_inputs,
+                                *inputs,
+                          ],
                           outputs=[
                                 base_output,
                                 movie_output,

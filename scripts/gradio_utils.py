@@ -8,7 +8,7 @@ import traceback
 import gradio as gr
 import requests
 
-from scripts.config_utils import AppConfig, ProjectConfig, DevConfig, app_config, dev_config
+from scripts.config_utils import AppConfig, ProjectConfig, DevConfig
 from scripts.convert_to_midi_with_onsets_frames import convert_to_midi_with_onsets_frames
 from scripts.debug_utils import debug_args
 from scripts.media_utils import convert_audio, create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, resize_image, trim_and_crop_video
@@ -17,6 +17,9 @@ from scripts.convert_to_midi import convert_to_midi_cqt, convert_to_midi_drums, 
 from scripts.midi_to_dtx import midi_to_dtx
 from scripts.platform_utils import force_copy_file, get_audio_path, get_folder_path, safe_remove_file
 from scripts.separate_music import separate_music
+
+app_config = AppConfig.instance()
+dev_config = DevConfig.instance()
 
 @debug_args
 def auto_save(config: ProjectConfig, project_path: str):
@@ -141,15 +144,15 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
 
     try:
         if app_config.batch_download_movie:
-            if not check_converted(config.movie_download_file_name):
-                outputs = download_video_gr(*config.to_dict().values(), project_path=project_path)
+            if not check_converted(config.get_fixed_download_file_name()):
+                outputs = download_video_gr(*app_config.to_dict().values(), *config.to_dict().values(), project_path=project_path)
                 config = ProjectConfig.load(project_path)
                 base_output_log = outputs[0]
                 output_log += outputs[1]
 
         if app_config.batch_convert_movie:
             if not check_converted(config.bgm_name):
-                outputs = convert_video_gr(*config.to_dict().values(), project_path=project_path)
+                outputs = convert_video_gr(*app_config.to_dict().values(), *config.to_dict().values(), project_path=project_path)
                 config = ProjectConfig.load(project_path)
                 base_output_log = outputs[0]
                 output_log += outputs[1]
@@ -194,8 +197,7 @@ def _batch_convert_gr(lock: mp.Lock, project_path):
 
 @debug_args
 def batch_convert_selected_score_gr(*args):
-    global app_config
-    app_config = AppConfig(*args)
+    app_config.update(*args)
     app_config.save(".")
 
     lock = mp.Manager().Lock()
@@ -208,8 +210,7 @@ def batch_convert_selected_score_gr(*args):
 
 @debug_args
 def batch_convert_all_score_gr(*args):
-    global app_config
-    app_config = AppConfig(*args)
+    app_config.update(*args)
     app_config.save(".")
 
     project_paths = app_config.get_project_paths()
@@ -237,10 +238,11 @@ def batch_convert_all_score_gr(*args):
 @debug_args
 def _download_video_gr(config: ProjectConfig, project_path):
     url = config.movie_url
-    output_file_name = config.movie_download_file_name
+    output_file_name = config.get_fixed_download_file_name()
     thumbnail_file_name = config.movie_thumbnail_file_name2
     thumbnail_width = app_config.thumbnail_width
     thumbnail_height = app_config.thumbnail_height
+    downloader = app_config.downloader
 
     if url == "":
         raise Exception("URLを入力してください。")
@@ -252,7 +254,8 @@ def _download_video_gr(config: ProjectConfig, project_path):
         url,
         output_path,
         thumbnail_path,
-        (thumbnail_width, thumbnail_height))
+        (thumbnail_width, thumbnail_height),
+        downloader)
 
     config.dtx_title = title
     config.dtx_artist = artist
@@ -272,14 +275,14 @@ def _download_video_gr(config: ProjectConfig, project_path):
 
 @debug_args
 def _convert_video_gr(config: ProjectConfig, project_path):
-    input_file_name = config.movie_download_file_name
+    input_file_name = config.get_fixed_download_file_name()
     output_file_name = config.movie_output_file_name
     bgm_file_name = config.bgm_name
     start_time = config.movie_start_time
     end_time = config.movie_end_time
     width = config.movie_width
     height = config.movie_height
-    target_dbfs = config.movie_target_dbfs
+    target_dbfs = config.movie_target_dbfs if config.movie_target_dbfs < 0 else app_config.default_dbfs
     bitrate = app_config.bgm_bitrate
 
     input_path = os.path.join(project_path, input_file_name)
@@ -300,9 +303,18 @@ def _convert_video_gr(config: ProjectConfig, project_path):
     return [base_output_log, output_log, input_path, output_path, bgm_path]
 
 @debug_args
-def download_and_convert_video_gr(*args, project_path=None):
+def parse_args(*args, project_path=None):
+    app_config.update(*(args[:AppConfig.get_parameters_size()]))
+    app_config.save(".")
+
     project_path = project_path or app_config.project_path
-    config = ProjectConfig(*args)
+    config = ProjectConfig(*(args[AppConfig.get_parameters_size():]))
+
+    return config, project_path
+
+@debug_args
+def download_and_convert_video_gr(*args, project_path=None):
+    config, project_path = parse_args(*args, project_path=project_path)
 
     download_outputs = _download_video_gr(config, project_path)
 
@@ -318,8 +330,7 @@ def download_and_convert_video_gr(*args, project_path=None):
 
 @debug_args
 def download_video_gr(*args, project_path=None):
-    project_path = project_path or app_config.project_path
-    config = ProjectConfig(*args)
+    config, project_path = parse_args(*args, project_path=project_path)
 
     outputs = _download_video_gr(config, project_path)
 
@@ -327,8 +338,7 @@ def download_video_gr(*args, project_path=None):
 
 @debug_args
 def convert_video_gr(*args, project_path=None):
-    project_path = project_path or app_config.project_path
-    config = ProjectConfig(*args)
+    config, project_path = parse_args(*args, project_path=project_path)
 
     outputs = _convert_video_gr(config, project_path)
 
@@ -339,7 +349,7 @@ def reload_video_gr(*args, project_path=None):
     project_path = project_path or app_config.project_path
     config = ProjectConfig(*args)
 
-    input_file_name = config.movie_download_file_name
+    input_file_name = config.get_fixed_download_file_name()
     output_file_name = config.movie_output_file_name
     bgm_file_name = config.bgm_name
 
@@ -414,12 +424,7 @@ def reload_preview_gr(*args, project_path=None):
 
 @debug_args
 def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
-    global app_config
-    app_config = AppConfig(*(args[:AppConfig.get_parameters_size()]))
-    app_config.save(".")
-
-    project_path = project_path or app_config.project_path
-    config = ProjectConfig(*(args[AppConfig.get_parameters_size():]))
+    config, project_path = parse_args(*args, project_path=project_path)
 
     model = app_config.separate_model
     jobs = app_config.separate_jobs
@@ -453,12 +458,7 @@ def separate_music_gr(*args, project_path=None, lock: mp.Lock=None):
 
 @debug_args
 def _convert_to_midi_gr(*args, project_path=None, is_test=False):
-    global app_config
-    app_config = AppConfig(*(args[:AppConfig.get_parameters_size()]))
-    app_config.save(".")
-
-    project_path = project_path or app_config.project_path
-    config = ProjectConfig(*(args[AppConfig.get_parameters_size():]))
+    config, project_path = parse_args(*args, project_path=project_path)
 
     input_file_name = config.midi_input_name2
     resolution = config.midi_resolution
@@ -719,7 +719,7 @@ def _midi_to_dtx_gr(config: ProjectConfig, project_path: str, output_image: bool
     dtx_info = config.get_dtx_info()
 
     if not os.path.exists(os.path.join(project_path, dtx_info.VIDEO)):
-        dtx_info.VIDEO = config.movie_download_file_name
+        dtx_info.VIDEO = config.get_fixed_download_file_name()
 
     dtx_text = midi_to_dtx(input_path, output_path, output_image_path, dtx_info)
 
@@ -847,8 +847,7 @@ def reset_dtx_wav_gr(*args, project_path=None):
 
 @debug_args
 def dev_select_separate_audio_gr(*args):
-    global dev_config
-    dev_config = DevConfig(*args)
+    dev_config.update(*args)
     dev_config.save(".")
 
     initialdir = os.path.dirname(dev_config.separate_audio_file)
@@ -865,8 +864,7 @@ def dev_select_separate_audio_gr(*args):
 
 @debug_args
 def dev_separate_audio_gr(*args):
-    global dev_config
-    dev_config = DevConfig(*args)
+    dev_config.update(*args)
     dev_config.save(".")
 
     model = dev_config.separate_model

@@ -6,6 +6,7 @@ import string
 import subprocess
 import time
 import zipfile
+import urllib.parse
 from moviepy.video.fx.crop import crop
 from moviepy.editor import AudioFileClip, AudioClip, VideoFileClip
 from moviepy.audio.fx.all import audio_fadein, audio_fadeout
@@ -17,6 +18,7 @@ import requests
 from bs4 import BeautifulSoup
 from scripts.debug_utils import debug_args
 from PIL import Image
+from yt_dlp import YoutubeDL
 
 def randomname(n):
    return ''.join(random.choices(string.ascii_letters + string.digits, k=n))
@@ -29,12 +31,14 @@ def get_tmp_dir():
     return tmp_dir
 
 @debug_args
-def get_tmp_file_path(ext):
-    tmp_dir = os.path.join(".", "tmp")
-    if not os.path.isdir(tmp_dir):
-        os.mkdir(tmp_dir)
+def get_tmp_file_name(ext):
+    return randomname(10) + ext
 
-    tmp_file_path = os.path.join(tmp_dir, randomname(10) + ext)
+@debug_args
+def get_tmp_file_path(ext):
+    tmp_dir = get_tmp_dir()
+    tmp_file_name = get_tmp_file_name(ext)
+    tmp_file_path = os.path.join(tmp_dir, tmp_file_name)
     return tmp_file_path
 
 @debug_args
@@ -87,17 +91,124 @@ def get_video_info(url):
     return title, thumbnail_url
 
 @debug_args
-def download_video(url, output_path, thumbnail_path, thumbnail_size):
-    output_dir, filename = os.path.split(output_path)
-    duration = 0
+def format_youtube_url(url):
+    # urlからvパラメータ以外を削除
+    pr = urllib.parse.urlparse(url)
+    qsl = urllib.parse.parse_qsl(pr.query)
+    qsl = [q for q in qsl if q[0] == "v"]
+    pr = pr._replace(query=urllib.parse.urlencode(qsl))
+    url = urllib.parse.urlunparse(pr)
+    return url
 
+@debug_args
+def pytube_download(url, output_dir, file_name, mime_type, order_key):
+    output_path = os.path.join(output_dir, file_name)
+    if os.path.exists(output_path):
+        os.remove(output_path)
+    
     yt = YouTube(url)
-    video = yt.streams.get_highest_resolution()
+    video = yt.streams.filter(mime_type=mime_type).order_by(order_key).desc().first()
+    video.download(output_path=output_dir, filename=file_name)
+
+@debug_args
+def download_youtube_with_pytube(url, output_path):
+    ext = os.path.splitext(output_path)[1]
+
+    tmp_dir = get_tmp_dir()
+    
+    yt = YouTube(url)
+    format_list = yt.streams.all()
+    for format in format_list:
+        print(format)
+
+    if ext == ".mp4":
+        video_filename = get_tmp_file_name(".mp4")
+        audio_filename = get_tmp_file_name(".m4a")
+        pytube_download(url, tmp_dir, video_filename, "video/mp4", 'resolution')
+        pytube_download(url, tmp_dir, audio_filename, "audio/mp4", 'abr')
+    elif ext == ".webm":
+        video_filename = get_tmp_file_name(".webm")
+        audio_filename = get_tmp_file_name(".webm")
+        pytube_download(url, tmp_dir, video_filename, "video/webm", 'resolution')
+        pytube_download(url, tmp_dir, audio_filename, "audio/webm", 'abr')
+    else:
+        raise Exception(f"サポートされていない拡張子です。 ext: {ext}")
+
+    merge_video_and_audio(
+        os.path.join(tmp_dir, video_filename),
+        os.path.join(tmp_dir, audio_filename),
+        output_path,
+        True
+    )
+
     original_title, thumbnail_url = get_video_info(url)
     title, artist = extract_title_and_artist(original_title)
     if artist == "":
         artist = yt.author
-    video.download(output_path=output_dir, filename=filename)
+
+    return original_title, thumbnail_url, title, artist
+
+@debug_args
+def ydl_download(url, output_path, format):
+    if os.path.exists(output_path):
+        os.remove(output_path)
+    
+    option = {
+        'outtmpl': output_path,
+        'format': format,
+        'ffmpeg_location': get_setting("FFMPEG_BINARY"),
+    }
+    with YoutubeDL(option) as ydl:
+        result = ydl.download([url])
+        if result != 0:
+            raise Exception(f"ダウンロードに失敗しました。 url: {url}")
+
+@debug_args
+def download_youtube_with_yt_dlp(url, output_path):
+    url = format_youtube_url(url)
+    print(f"Download youtube. {url}")
+
+    ext = os.path.splitext(output_path)[1]
+
+    if ext == ".mp4":
+        output_video_path = get_tmp_file_path(".mp4")
+        output_audio_path = get_tmp_file_path(".m4a")
+        ydl_download(url, output_video_path, 'bestvideo[ext=mp4]')
+        ydl_download(url, output_audio_path, 'bestaudio[ext=m4a]')
+    elif ext == ".webm":
+        output_video_path = get_tmp_file_path(".webm")
+        output_audio_path = get_tmp_file_path(".webm")
+        ydl_download(url, output_video_path, 'bestvideo[ext=webm]')
+        ydl_download(url, output_audio_path, 'bestaudio[ext=webm]')
+    else:
+        raise Exception(f"サポートされていない拡張子です。 ext: {ext}")
+    
+    merge_video_and_audio(
+        output_video_path,
+        output_audio_path,
+        output_path,
+        True
+    )
+    
+    original_title, thumbnail_url = get_video_info(url)
+    title, artist = extract_title_and_artist(original_title)
+    if artist == "":
+        ydl = YoutubeDL()
+        info_dict = ydl.extract_info(url, download=False)
+        artist = info_dict.get('uploader', None)
+
+    return original_title, thumbnail_url, title, artist
+
+@debug_args
+def download_video(url, output_path, thumbnail_path, thumbnail_size, downloader):
+    duration = 0
+
+    if downloader == "pytube":
+        original_title, thumbnail_url, title, artist = download_youtube_with_pytube(url, output_path)
+    elif downloader == "yt-dlp":
+        original_title, thumbnail_url, title, artist = download_youtube_with_yt_dlp(url, output_path)
+    else:
+        raise Exception(f"サポートされていないダウンローダーです。 downloader: {downloader}")
 
     print(f"Video download is complete. {output_path}")
 
@@ -119,8 +230,9 @@ def download_video(url, output_path, thumbnail_path, thumbnail_size):
 
 @debug_args
 def trim_and_crop_video(input_path, output_path, start_time, end_time, width, height, bitrate):
-    # パラメータが全て0の場合は何もしない
-    if start_time == 0.0 and end_time == 0.0 and width == 0 and height == 0:
+    # mp4でパラメータが全て0の場合は何もしない
+    ext = os.path.splitext(input_path)[1]
+    if start_time == 0.0 and end_time == 0.0 and width == 0 and height == 0 and ext == ".mp4":
         print(f"Skip trim_and_crop_video. {input_path}")
         return input_path
 
@@ -222,6 +334,33 @@ def convert_audio(input_file, output_file, bitrate=None, remove_original=True):
     if os.path.exists(output_file):
         os.remove(output_file)
     os.rename(tmp_output_file, output_file)
+
+@debug_args
+def merge_video_and_audio(input_video_file, input_audio_file, output_file, remove_original=True):
+    tmp_input_video_file = get_tmp_file_path(os.path.splitext(input_video_file)[1])
+    tmp_input_audio_file = get_tmp_file_path(os.path.splitext(input_audio_file)[1])
+    tmp_output_file = get_tmp_file_path(os.path.splitext(output_file)[1])
+
+    shutil.copy(input_video_file, tmp_input_video_file)
+    shutil.copy(input_audio_file, tmp_input_audio_file)
+
+    ffmpeg = get_setting("FFMPEG_BINARY")
+    cmd = [ffmpeg, '-y', '-i', tmp_input_video_file, '-i', tmp_input_audio_file, '-c:v', 'copy', '-c:a', 'copy', '-map', '0:v:0', '-map', '1:a:0', tmp_output_file]
+
+    print(" ".join(cmd))
+
+    subprocess.run(cmd)
+
+    os.remove(tmp_input_video_file)
+    os.remove(tmp_input_audio_file)
+
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    os.rename(tmp_output_file, output_file)
+
+    if remove_original:
+        os.remove(input_video_file)
+        os.remove(input_audio_file)
 
 @debug_args
 def create_preview_audio(
