@@ -80,7 +80,7 @@ class AppConfig(JsonConfig):
     workspace_path: str = ""
     auto_save: bool = True
     download_format: str = "webm"
-    downloader: str = "pytube"
+    downloader: str = "yt-dlp"
     bgm_bitrate: str = "192k"
     thumbnail_width: int = 640
     thumbnail_height: int = 480
