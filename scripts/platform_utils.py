@@ -104,3 +104,59 @@ def get_audio_path(initialdir):
 
     audio_file = audio_file.replace("¥", os.path.sep).replace("\\", os.path.sep).replace("/", os.path.sep)
     return audio_file
+
+# 動画ファイルを選択するダイアログを表示する
+# Keep a reference to the ctypes function pointer to avoid deallocation
+run_askvideofile_ctypes = None
+result_askvideofile_queue = queue.Queue()
+askvideofile_initialdir = ""
+
+if platform.system() == "Darwin":  # macOS
+    video_file_types = []
+else:
+    video_file_types = [
+        ("Video files", "*.mp4;*.mkv;*.avi;*.webm"),
+        ("MP4 files", "*.mp4"),
+        ("MKV files", "*.mkv"),
+        ("AVI files", "*.avi"),
+        ("WebM files", "*.webm"),
+        ("All files", "*.*"),
+    ]
+
+def run_askvideofile():
+    root = tkinter.Tk()
+    root.wm_attributes('-topmost', 1)
+    root.withdraw()
+
+    video_file = filedialog.askopenfilename(
+        title="Open video file",
+        filetypes=video_file_types,
+        #initialdir=askvideofile_initialdir,
+    )
+    result_askvideofile_queue.put(video_file)
+    result_askvideofile_queue.put("")
+    root.destroy()
+    return 0
+
+def get_video_path(initialdir):
+    global run_askvideofile_ctypes
+    global askvideofile_initialdir
+
+    askvideofile_initialdir = initialdir or ""
+
+    if platform.system() == "Darwin":  # macOS
+        import ctypes
+        if run_askvideofile_ctypes is None:
+            run_askvideofile_ctypes = ctypes.PYFUNCTYPE(ctypes.c_int)(run_askvideofile)
+        ctypes.pythonapi.Py_AddPendingCall(run_askvideofile_ctypes, None)
+    else:  # Windows and other platforms
+        main_thread = threading.Thread(target=run_askvideofile)
+        main_thread.start()
+        main_thread.join()
+
+    # Wait for the result from the main thread
+    video_file: str = result_askvideofile_queue.get()
+
+    video_file = video_file.replace("¥", os.path.sep).replace("\\", os.path.sep).replace("/", os.path.sep)
+    return video_file
+

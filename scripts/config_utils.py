@@ -386,6 +386,14 @@ class DevConfig(JsonConfig):
     separate_model: str = "htdemucs"
     separate_jobs: int = cpu_count
 
+    download_video_output_dir: str = ""
+    download_video_url: str = ""
+
+    crop_video_input_path: str = ""
+    crop_video_start_time: float = 0.0
+    crop_video_end_time: float = 0.0
+    crop_video_adjust_start_keyframe: bool = True
+
     _instance = None # Singleton instance
 
     @classmethod

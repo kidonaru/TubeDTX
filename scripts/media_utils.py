@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import re
@@ -32,6 +33,8 @@ def get_tmp_dir():
 
 @debug_args
 def get_tmp_file_name(ext):
+    if ext[0] != ".":
+        ext = "." + ext
     return randomname(10) + ext
 
 @debug_args
@@ -292,7 +295,7 @@ def normalize_audio(audio_file, target_dBFS, bitrate):
     subprocess.run(cmd)
 
     os.remove(tmp_input_file)
-    os.rename(tmp_output_file, audio_file)
+    shutil.move(tmp_output_file, audio_file)
 
 @debug_args
 def extract_audio(input_path, output_path, target_dbfs, bitrate):
@@ -333,7 +336,7 @@ def convert_audio(input_file, output_file, bitrate=None, remove_original=True):
 
     if os.path.exists(output_file):
         os.remove(output_file)
-    os.rename(tmp_output_file, output_file)
+    shutil.move(tmp_output_file, output_file)
 
 @debug_args
 def merge_video_and_audio(input_video_file, input_audio_file, output_file, remove_original=True):
@@ -356,7 +359,7 @@ def merge_video_and_audio(input_video_file, input_audio_file, output_file, remov
 
     if os.path.exists(output_file):
         os.remove(output_file)
-    os.rename(tmp_output_file, output_file)
+    shutil.move(tmp_output_file, output_file)
 
     if remove_original:
         os.remove(input_video_file)
@@ -434,3 +437,128 @@ def download_and_extract(url, target_path):
 
     # zipファイルを削除
     os.remove(zip_path)
+
+@debug_args
+def find_ffprobe_path():
+    # 環境変数からFFprobeのパスを取得
+    ffprobe_path = os.getenv('FFPROBE_PATH')
+    if ffprobe_path and os.path.isfile(ffprobe_path):
+        return ffprobe_path
+
+    # 'where'または'which'コマンドを使用してFFprobeのパスを探索
+    try:
+        command = 'where' if os.name == 'nt' else 'which'
+        ffprobe_path = subprocess.check_output([command, 'ffprobe']).strip()
+        if os.path.isfile(ffprobe_path):
+            return ffprobe_path.decode()
+    except subprocess.CalledProcessError:
+        pass
+
+    # FFprobeが見つからない場合はNoneを返す
+    return None
+
+@debug_args
+def find_closest_keyframe_time_(video_file, specified_time):
+    ffprove = find_ffprobe_path()
+    cmd = [
+        ffprove,
+        '-select_streams', 'v',
+        '-show_frames',
+        '-print_format', 'json',
+        video_file
+    ]
+    print(" ".join(cmd))
+
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout, stderr = process.communicate()
+
+    if process.returncode != 0:
+        raise RuntimeError(f"FFprobe returned error code {process.returncode}\n{stderr}")
+
+    json_data = json.loads(stdout)
+
+    closest_time = None
+    min_diff = float('inf')
+
+    for frame in json_data['frames']:
+        if frame['key_frame'] == 1:
+            frame_time = float(frame['pts_time'])
+            diff = abs(specified_time - frame_time)
+            if diff < min_diff:
+                min_diff = diff
+                closest_time = frame_time
+
+    return closest_time
+
+@debug_args
+def find_closest_keyframe_time(video_file, specified_time):
+    ffmpeg = get_setting("FFMPEG_BINARY")
+    cmd = [
+        ffmpeg,
+        '-i', video_file,
+        '-vf', "select='eq(pict_type,I)',showinfo",
+        '-f', 'null', '-'
+    ]
+    print(" ".join(cmd))
+
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout, stderr = process.communicate()
+
+    if process.returncode != 0:
+        raise RuntimeError(f"FFprobe returned error code {process.returncode}\n{stderr}")
+
+    closest_time = None
+    min_diff = float('inf')
+
+    for line in stderr.splitlines():
+        if 'pts_time:' in line:
+            frame_time = float(line.split('pts_time:')[1].split(' ')[0])
+            diff = abs(specified_time - frame_time)
+            if diff < min_diff:
+                min_diff = diff
+                closest_time = frame_time
+
+    return closest_time
+
+@debug_args
+def get_video_duration(input_path):
+    duration = 0.0
+    with VideoFileClip(input_path) as video:
+        duration = video.duration
+        video.close()
+
+    return duration
+
+@debug_args
+def crop_copy_video(input_path, output_path, start_time, end_time, adjust_start_keyframe):
+
+    tmp_input_path = get_tmp_file_path(os.path.splitext(input_path)[1])
+    tmp_output_path = get_tmp_file_path(os.path.splitext(output_path)[1])
+
+    shutil.copy(input_path, tmp_input_path)
+
+    if adjust_start_keyframe:
+        start_time = find_closest_keyframe_time(tmp_input_path, start_time)
+        print(f"Adjusted start time. {start_time}")
+
+    if end_time <= 0.0:
+        end_time = get_video_duration(tmp_input_path)
+
+    duration = end_time - start_time
+
+    ffmpeg = get_setting("FFMPEG_BINARY")
+    cmd = [ffmpeg, '-ss', f"{start_time}", '-i', tmp_input_path, '-t', f"{duration}", '-c', 'copy', tmp_output_path]
+
+    print(" ".join(cmd))
+
+    subprocess.run(cmd)
+
+    os.remove(tmp_input_path)
+
+    if os.path.exists(output_path):
+        os.remove(output_path)
+
+    shutil.move(tmp_output_path, output_path)
+
+    print(f"Video clipping is complete. {output_path}")
+    return output_path

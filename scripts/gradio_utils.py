@@ -11,11 +11,11 @@ import requests
 from scripts.config_utils import AppConfig, ProjectConfig, DevConfig
 from scripts.convert_to_midi_with_onsets_frames import convert_to_midi_with_onsets_frames
 from scripts.debug_utils import debug_args
-from scripts.media_utils import convert_audio, create_preview_audio, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, resize_image, trim_and_crop_video
+from scripts.media_utils import convert_audio, create_preview_audio, crop_copy_video, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, resize_image, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
 from scripts.convert_to_midi import convert_to_midi_cqt, convert_to_midi_drums, convert_to_midi_peak, output_test_image
 from scripts.midi_to_dtx import midi_to_dtx
-from scripts.platform_utils import force_copy_file, get_audio_path, get_folder_path, safe_remove_file
+from scripts.platform_utils import force_copy_file, get_audio_path, get_folder_path, get_video_path, safe_remove_file
 from scripts.separate_music import separate_music
 
 app_config = AppConfig.instance()
@@ -889,3 +889,98 @@ def dev_separate_audio_gr(*args):
     output_log = "音声の分離に成功しました。\n\n"
 
     return [output_log, *converted_files]
+
+@debug_args
+def dev_select_download_video_output_dir_gr(*args):
+    dev_config.update(*args)
+    dev_config.save(".")
+
+    initialdir = os.path.dirname(dev_config.download_video_output_dir)
+    output_dir = get_folder_path(initialdir=initialdir)
+    if output_dir == '':
+        raise Exception("出力先フォルダを選択してください")
+
+    dev_config.download_video_output_dir = output_dir
+    dev_config.save(".")
+
+    output_log = f"出力先フォルダを開きました。{output_dir}\n\n"
+
+    return [output_log, output_dir]
+
+@debug_args
+def dev_download_video_gr(*args):
+    dev_config.update(*args)
+    dev_config.save(".")
+
+    url = dev_config.download_video_url
+    output_dir = dev_config.download_video_output_dir
+    downloader = app_config.downloader
+    tmp_output_path = get_tmp_file_path(app_config.download_format)
+    tmp_thumbnail_path = get_tmp_file_path(".jpg")
+    thumbnail_width = app_config.thumbnail_width
+    thumbnail_height = app_config.thumbnail_height
+
+    if url == "":
+        raise Exception("URLを入力してください。")
+
+    comment, title, artist, duration, width, height = download_video(
+        url,
+        tmp_output_path,
+        tmp_thumbnail_path,
+        (thumbnail_width, thumbnail_height),
+        downloader)
+
+    output_file_name = f"{artist} - {title}"
+    output_path = os.path.join(output_dir, output_file_name + "." + app_config.download_format)
+    thumbnail_path = os.path.join(output_dir, output_file_name + ".jpg")
+
+    shutil.move(tmp_output_path, output_path)
+    shutil.move(tmp_thumbnail_path, thumbnail_path)
+
+    output_log = "動画のダウンロードに成功しました。\n\n"
+    output_log += f"title: {title}\n"
+    output_log += f"artist: {artist}\n"
+    output_log += f"duration: {duration}\n"
+
+    return [output_log]
+
+@debug_args
+def dev_select_crop_video_input_path_gr(*args):
+    dev_config.update(*args)
+    dev_config.save(".")
+
+    initialdir = os.path.dirname(dev_config.crop_video_input_path)
+    input_path = get_video_path(initialdir=initialdir)
+    if input_path == '':
+        raise Exception("動画を選択してください")
+
+    dev_config.crop_video_input_path = input_path
+    dev_config.save(".")
+
+    output_log = f"動画を開きました。{input_path}\n\n"
+
+    return [output_log, input_path]
+
+@debug_args
+def dev_crop_video_gr(*args):
+    dev_config.update(*args)
+    dev_config.save(".")
+
+    input_path = dev_config.crop_video_input_path
+    start_time = dev_config.crop_video_start_time
+    end_time = dev_config.crop_video_end_time
+    adjust_start_keyframe = dev_config.crop_video_adjust_start_keyframe
+
+    if not os.path.exists(input_path):
+        raise Exception(f"動画が見つかりません。 {input_path}")
+
+    filename, ext = os.path.splitext(os.path.basename(input_path))
+
+    output_dir = os.path.dirname(input_path)
+    output_path = os.path.join(output_dir, filename + "_cropped" + ext)
+
+    output_path = crop_copy_video(input_path, output_path, start_time, end_time, adjust_start_keyframe)
+
+    output_log = "動画のトリミングに成功しました。\n\n"
+
+    return output_log
