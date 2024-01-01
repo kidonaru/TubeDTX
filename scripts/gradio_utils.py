@@ -1,5 +1,6 @@
 from contextlib import nullcontext
 from dataclasses import asdict
+from natsort import natsorted
 import datetime
 import multiprocessing as mp
 import os
@@ -11,7 +12,7 @@ import requests
 from scripts.config_utils import AppConfig, ProjectConfig, DevConfig
 from scripts.convert_to_midi_with_onsets_frames import convert_to_midi_with_onsets_frames
 from scripts.debug_utils import debug_args
-from scripts.media_utils import convert_audio, create_preview_audio, crop_copy_video, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, resize_image, trim_and_crop_video
+from scripts.media_utils import convert_audio, create_preview_audio, crop_copy_video, download_video, extract_audio, get_tmp_dir, get_tmp_file_path, get_video_info, merge_ts_files, resize_image, trim_and_crop_video
 from scripts.music_utils import compute_bpm, compute_chorus_time
 from scripts.convert_to_midi import convert_to_midi_cqt, convert_to_midi_drums, convert_to_midi_peak, output_test_image
 from scripts.midi_to_dtx import midi_to_dtx
@@ -984,3 +985,50 @@ def dev_crop_video_gr(*args):
     output_log = "動画のトリミングに成功しました。\n\n"
 
     return output_log
+
+@debug_args
+def dev_merge_ts_files_gr(*args):
+    dev_config.update(*args)
+    dev_config.save(".")
+
+    input_dir = dev_config.merge_ts_files_input_dir
+    output_file_name = dev_config.merge_ts_files_output_file_name
+    output_path = os.path.join(input_dir, output_file_name)
+
+    if not os.path.exists(input_dir):
+        raise Exception(f"入力フォルダが見つかりません。 {input_dir}")
+
+    if os.path.exists(output_path):
+        raise Exception(f"出力ファイルがすでに存在します。 {output_path}")
+
+    # ファイルパスの一覧を取得
+    input_paths = []
+    for root, dirs, files in os.walk(input_dir):
+        for file in files:
+            input_paths.append(os.path.join(root, file))
+
+    # ファイルパスの一覧をソート
+    input_paths = natsorted(input_paths)
+
+    output_path = merge_ts_files(input_paths, output_path)
+
+    output_log = "動画の結合に成功しました。\n\n"
+
+    return output_log
+
+@debug_args
+def dev_select_merge_ts_files_input_dir_gr(*args):
+    dev_config.update(*args)
+    dev_config.save(".")
+
+    initialdir = os.path.dirname(dev_config.merge_ts_files_input_dir)
+    input_dir = get_folder_path(initialdir=initialdir)
+    if input_dir == '':
+        raise Exception("入力フォルダを選択してください")
+
+    dev_config.merge_ts_files_input_dir = input_dir
+    dev_config.save(".")
+
+    output_log = f"入力フォルダを開きました。{input_dir}\n\n"
+
+    return [output_log, input_dir]

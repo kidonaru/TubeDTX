@@ -1,7 +1,7 @@
 import gradio as gr
 
 from scripts.config_utils import AppConfig, ProjectConfig, DevConfig
-from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, dev_crop_video_gr, dev_download_video_gr, dev_select_crop_video_input_path_gr, dev_select_download_video_output_dir_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr, dev_select_separate_audio_gr, dev_separate_audio_gr
+from scripts.gradio_utils import batch_convert_all_score_gr, batch_convert_selected_score_gr, convert_to_midi_gr, convert_video_gr, create_preview_gr, dev_crop_video_gr, dev_download_video_gr, dev_merge_ts_files_gr, dev_select_crop_video_input_path_gr, dev_select_download_video_output_dir_gr, dev_select_merge_ts_files_input_dir_gr, download_and_convert_video_gr, download_video_gr, midi_to_dtx_and_output_image_gr, midi_to_dtx_gr, new_score_gr, reload_preview_gr, reload_video_gr, reload_workspace_gr, reset_dtx_wav_gr, reset_pitch_midi_gr, select_project_gr, select_workspace_gr, separate_music_gr, convert_test_to_midi_gr, dev_select_separate_audio_gr, dev_separate_audio_gr
 
 demucs_models = ["htdemucs", "htdemucs_ft", "htdemucs_6s", "hdemucs_mmi", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q", "SIG"]
 midi_models = ["original", "e-gmd", "mixed"]
@@ -437,6 +437,22 @@ with gr.Blocks(title="TubeDTX") as demo:
                             with gr.Column():
                                 dev_crop_video_output = gr.Textbox(show_label=False)
 
+                    with gr.TabItem("Merge TS Files"):
+                        with gr.Row():
+                            with gr.Column():
+                                add_space(1)
+                                with gr.Row():
+                                    dev_merge_ts_files_button = gr.Button("Merge", variant="primary")
+                                with gr.Row():
+                                    with gr.Column(scale=5):
+                                        dev_merge_ts_files_input_dir_textbox = gr.Textbox(label="Merge TS Files Input Dir", value=dev_config.merge_ts_files_input_dir)
+                                    with gr.Column(scale=1, min_width=50):
+                                        dev_merge_ts_files_input_dir_open_button = gr.Button("Open", variant="primary")
+                                    with gr.Column(scale=5):
+                                        dev_merge_ts_files_output_file_name_textbox = gr.Textbox(label="Merge TS Files Output File Name", value=dev_config.merge_ts_files_output_file_name)
+                            with gr.Column():
+                                dev_merge_ts_files_output = gr.Textbox(show_label=False)
+
     app_config_inputs = [
         project_path_textbox,
         workspace_path_textbox,
@@ -477,6 +493,9 @@ with gr.Blocks(title="TubeDTX") as demo:
             dev_crop_video_start_time_slider,
             dev_crop_video_end_time_slider,
             dev_crop_video_adjust_start_keyframe_checkbox,
+
+            dev_merge_ts_files_input_dir_textbox,
+            dev_merge_ts_files_output_file_name_textbox,
         ]
 
     dtx_wav_inputs = [
@@ -886,6 +905,19 @@ with gr.Blocks(title="TubeDTX") as demo:
                         inputs=dev_config_inputs,
                         outputs=[
                                 dev_crop_video_output,
+                        ])
+        
+        dev_merge_ts_files_input_dir_open_button.click(dev_select_merge_ts_files_input_dir_gr,
+                                    inputs=dev_config_inputs,
+                                    outputs=[
+                                            dev_merge_ts_files_output,
+                                            dev_merge_ts_files_input_dir_textbox,
+                                    ])
+
+        dev_merge_ts_files_button.click(dev_merge_ts_files_gr,
+                        inputs=dev_config_inputs,
+                        outputs=[
+                                dev_merge_ts_files_output,
                         ])
 
 if __name__ == "__main__":

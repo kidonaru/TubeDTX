@@ -17,3 +17,4 @@ tf_slim==1.1.0
 bokeh==2.4.3
 yt-dlp
 Pillow==9.3.0
+natsort==8.4.0

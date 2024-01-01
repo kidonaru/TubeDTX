@@ -562,3 +562,20 @@ def crop_copy_video(input_path, output_path, start_time, end_time, adjust_start_
 
     print(f"Video clipping is complete. {output_path}")
     return output_path
+
+@debug_args
+def merge_ts_files(input_files, output_file):
+    ffmpeg = get_setting("FFMPEG_BINARY")
+    with open('temp.txt', 'w') as f:
+        f.write('\n'.join(["file '" + file + "'" for file in input_files]))
+
+    cmd = [ffmpeg, '-f', 'concat', '-safe', '0', '-i', 'temp.txt', '-c', 'copy', output_file]
+
+    print(" ".join(cmd))
+
+    subprocess.run(cmd)
+
+    os.remove('temp.txt')
+
+    print(f"TS files merging is complete. {output_file}")
+    return output_file

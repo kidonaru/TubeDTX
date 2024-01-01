@@ -394,6 +394,9 @@ class DevConfig(JsonConfig):
     crop_video_end_time: float = 0.0
     crop_video_adjust_start_keyframe: bool = True
 
+    merge_ts_files_input_dir: str = ""
+    merge_ts_files_output_file_name: str = "output.mp4"
+
     _instance = None # Singleton instance
 
     @classmethod
